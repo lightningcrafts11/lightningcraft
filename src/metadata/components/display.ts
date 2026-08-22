@@ -1,0 +1,266 @@
+import { Type, Hash, Smile, Loader2 } from 'lucide-react';
+import type { ComponentDefinition } from '@/types/component';
+import {
+  CURRENCY_DISPLAY_OPTIONS,
+  FORMATTED_NUMBER_STYLE_OPTIONS,
+  ICON_SIZE_OPTIONS,
+  ICON_VARIANT_OPTIONS,
+  SPINNER_VARIANT_OPTIONS,
+} from '../shared/options';
+import { LEAF_COMPOSITION, LEAF_SPACING, lwcOutput } from '../shared/composition';
+
+export const DISPLAY_COMPONENTS: ComponentDefinition[] = [
+  {
+    type: 'lightning-formatted-text',
+    salesforceName: 'lightning-formatted-text',
+    displayName: 'Formatted Text',
+    category: 'Display',
+    description:
+      'Shows read-only text, converts newline characters to line breaks, and can linkify URLs and email addresses.',
+    icon: Type,
+    composition: LEAF_COMPOSITION,
+    styleCapabilities: LEAF_SPACING,
+    defaultAttributes: {
+      value: 'Sample text',
+      linkify: false,
+    },
+    properties: [
+      {
+        name: 'value',
+        attributeName: 'value',
+        label: 'Value',
+        type: 'text',
+        defaultValue: 'Sample text',
+        required: true,
+        description: 'Sets the text to display.',
+        placeholder: 'Text to display',
+      },
+      {
+        name: 'linkify',
+        attributeName: 'linkify',
+        label: 'Linkify',
+        type: 'boolean',
+        defaultValue: false,
+        description:
+          'If present, URLs and email addresses are displayed as links. They are displayed as plain text by default. Supported protocols: http, https, ftp, and mailto.',
+      },
+    ],
+    canvas: { kind: 'leaf', previewKind: 'formatted-text', previewLabelProperty: 'value' },
+    output: lwcOutput('lightning-formatted-text'),
+  },
+
+  {
+    type: 'lightning-formatted-number',
+    salesforceName: 'lightning-formatted-number',
+    displayName: 'Formatted Number',
+    category: 'Display',
+    description:
+      'Shows formatted numbers for decimals, currency, and percentages using Intl.NumberFormat.',
+    icon: Hash,
+    composition: LEAF_COMPOSITION,
+    styleCapabilities: LEAF_SPACING,
+    defaultAttributes: {
+      value: 1234.56,
+      'format-style': 'decimal',
+    },
+    properties: [
+      {
+        name: 'value',
+        attributeName: 'value',
+        label: 'Value',
+        type: 'number',
+        defaultValue: 1234.56,
+        required: true,
+        description: 'The value to be formatted.',
+        placeholder: 'Numeric value',
+      },
+      {
+        name: 'format-style',
+        attributeName: 'format-style',
+        label: 'Format Style',
+        type: 'select',
+        defaultValue: 'decimal',
+        description:
+          'Possible values: decimal, currency, percent, and percent-fixed. Defaults to decimal. percent-fixed displays the value as-is without multiplying by 100.',
+        options: FORMATTED_NUMBER_STYLE_OPTIONS,
+      },
+      {
+        name: 'currency-code',
+        attributeName: 'currency-code',
+        label: 'Currency Code',
+        type: 'text',
+        description:
+          "Used when format-style is currency. ISO 4217 currency codes such as 'USD'.",
+        placeholder: 'e.g. USD',
+      },
+      {
+        name: 'currency-display-as',
+        attributeName: 'currency-display-as',
+        label: 'Currency Display As',
+        type: 'select',
+        defaultValue: 'symbol',
+        description: 'How currency is displayed: symbol, code, or name. Defaults to symbol.',
+        options: CURRENCY_DISPLAY_OPTIONS,
+      },
+      {
+        name: 'minimum-fraction-digits',
+        attributeName: 'minimum-fraction-digits',
+        label: 'Min Fraction Digits',
+        type: 'number',
+        description: 'The minimum number of fraction digits that are required.',
+        placeholder: 'e.g. 0',
+      },
+      {
+        name: 'maximum-fraction-digits',
+        attributeName: 'maximum-fraction-digits',
+        label: 'Max Fraction Digits',
+        type: 'number',
+        description: 'The maximum number of fraction digits that are allowed.',
+        placeholder: 'e.g. 2',
+      },
+      {
+        name: 'minimum-integer-digits',
+        attributeName: 'minimum-integer-digits',
+        label: 'Min Integer Digits',
+        type: 'number',
+        description: 'The minimum number of integer digits that are required. Possible values are from 1 to 21.',
+        placeholder: 'e.g. 1',
+      },
+      {
+        name: 'minimum-significant-digits',
+        attributeName: 'minimum-significant-digits',
+        label: 'Min Significant Digits',
+        type: 'number',
+        description: 'The minimum number of significant digits that are required. Possible values are from 1 to 21.',
+        placeholder: 'e.g. 1',
+      },
+      {
+        name: 'maximum-significant-digits',
+        attributeName: 'maximum-significant-digits',
+        label: 'Max Significant Digits',
+        type: 'number',
+        description: 'The maximum number of significant digits that are allowed. Possible values are from 1 to 21.',
+        placeholder: 'e.g. 21',
+      },
+    ],
+    canvas: { kind: 'leaf', previewKind: 'formatted-number', previewLabelProperty: 'value' },
+    output: lwcOutput('lightning-formatted-number'),
+  },
+
+  {
+    type: 'lightning-icon',
+    salesforceName: 'lightning-icon',
+    displayName: 'Icon',
+    category: 'Display',
+    description: 'A visual element that displays a Salesforce Lightning Design System icon.',
+    icon: Smile,
+    composition: LEAF_COMPOSITION,
+    styleCapabilities: LEAF_SPACING,
+    defaultAttributes: {
+      'icon-name': 'utility:user',
+      'alternative-text': 'Icon',
+      size: 'medium',
+    },
+    properties: [
+      {
+        name: 'icon-name',
+        attributeName: 'icon-name',
+        label: 'Icon Name',
+        type: 'text',
+        defaultValue: 'utility:user',
+        required: true,
+        description:
+          "Lightning Design System name of the icon in the format 'utility:down'.",
+        placeholder: 'e.g. utility:user',
+      },
+      {
+        name: 'alternative-text',
+        attributeName: 'alternative-text',
+        label: 'Alternative Text',
+        type: 'text',
+        defaultValue: 'Icon',
+        description:
+          "Assistive text describing the icon action, for example 'Upload File', not the icon appearance.",
+        placeholder: 'Accessible label',
+      },
+      {
+        name: 'size',
+        attributeName: 'size',
+        label: 'Size',
+        type: 'select',
+        defaultValue: 'medium',
+        description: 'Options include xx-small, x-small, small, medium, or large. Defaults to medium.',
+        options: ICON_SIZE_OPTIONS,
+      },
+      {
+        name: 'variant',
+        attributeName: 'variant',
+        label: 'Variant',
+        type: 'select',
+        description:
+          'Applies inverse, error, success, or warning styling. Intended for utility icons.',
+        options: ICON_VARIANT_OPTIONS,
+      },
+      {
+        name: 'src',
+        attributeName: 'src',
+        label: 'Src',
+        type: 'text',
+        description:
+          'URI path to a custom SVG sprite, including the resource name, for example /assets/icons/standard-sprite/svg/test.svg#icon-heart. When present, the icon is loaded from this resource.',
+        placeholder: 'Custom SVG sprite path',
+      },
+    ],
+    canvas: { kind: 'leaf', previewKind: 'icon', previewLabelProperty: 'icon-name' },
+    output: lwcOutput('lightning-icon'),
+  },
+
+  {
+    type: 'lightning-spinner',
+    salesforceName: 'lightning-spinner',
+    displayName: 'Spinner',
+    category: 'Display',
+    description: 'An animated spinner that indicates a feature is loading.',
+    icon: Loader2,
+    composition: LEAF_COMPOSITION,
+    styleCapabilities: LEAF_SPACING,
+    defaultAttributes: {
+      'alternative-text': 'Loading',
+      size: 'medium',
+      variant: 'base',
+    },
+    properties: [
+      {
+        name: 'alternative-text',
+        attributeName: 'alternative-text',
+        label: 'Alternative Text',
+        type: 'text',
+        defaultValue: 'Loading',
+        required: true,
+        description: 'Alternative text describing the reason for the wait and need for a spinner.',
+        placeholder: 'Accessible label',
+      },
+      {
+        name: 'size',
+        attributeName: 'size',
+        label: 'Size',
+        type: 'select',
+        defaultValue: 'medium',
+        description:
+          'Accepted sizes: xx-small, x-small, small, medium, and large. Defaults to medium.',
+        options: ICON_SIZE_OPTIONS,
+      },
+      {
+        name: 'variant',
+        attributeName: 'variant',
+        label: 'Variant',
+        type: 'select',
+        defaultValue: 'base',
+        description: 'Accepted variants: base, brand, and inverse. Defaults to base.',
+        options: SPINNER_VARIANT_OPTIONS,
+      },
+    ],
+    canvas: { kind: 'leaf', previewKind: 'spinner', previewLabelProperty: 'alternative-text' },
+    output: lwcOutput('lightning-spinner'),
+  },
+];

@@ -1,0 +1,170 @@
+---
+description: LightningCraft MVP scope and development guardrails
+alwaysApply: true
+---
+
+# LightningCraft MVP — Mandatory Development Scope
+
+You are working on the LightningCraft MVP.
+
+## Product Goal
+
+LightningCraft is a browser-based visual builder for Salesforce Lightning Web Components (LWC).
+
+The MVP allows a user to:
+
+1. Open the builder.
+2. Browse available LWC components.
+3. Drag and drop components onto a canvas.
+4. Select components on the canvas.
+5. Configure supported component attributes and UI properties.
+6. See changes immediately in the visual preview.
+7. Reorder components.
+8. Delete and duplicate components.
+9. Undo and redo changes.
+10. Persist the builder state locally.
+11. Generate LWC HTML from the visual component tree.
+12. Copy the generated HTML to the clipboard.
+
+The primary user workflow is:
+
+Drag → Configure → Preview → Copy HTML.
+
+## MVP Technology
+
+Use:
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- dnd-kit
+- Zustand
+- Prettier
+- Lucide React
+
+## MVP Architecture
+
+Use a metadata-driven architecture.
+
+The component metadata is the source used to define:
+
+- Component name
+- Component type
+- Default attributes
+- Supported attributes
+- Property editor types
+- Property labels
+- Property defaults
+- Renderer behavior
+- HTML generation behavior
+
+The visual builder state must be represented as a JSON component tree.
+
+The JSON component tree is the single source of truth.
+
+The application should derive:
+
+- Canvas rendering
+- Property inspector values
+- Generated HTML
+
+from this state.
+
+## Strict MVP Scope
+
+Do NOT implement the following during MVP:
+
+- Aura component support
+- Apex generation
+- Salesforce deployment
+- Salesforce authentication
+- Salesforce API integration
+- Backend services
+- Database
+- User accounts
+- Authentication
+- Cloud synchronization
+- Real-time collaboration
+- Marketplace
+- Plugin system
+- SDK
+- AI features
+- AI agents
+- Enterprise administration
+- Billing
+- Payments
+- Multi-tenant architecture
+- Analytics platform
+- Microservices
+- Kubernetes
+- Mobile application
+
+These are future capabilities and must not be introduced unless explicitly requested.
+
+## Development Principles
+
+Prefer simple, maintainable implementations.
+
+Do not over-engineer.
+
+Do not introduce infrastructure that is not required by the MVP.
+
+Do not create abstractions merely for hypothetical future requirements.
+
+Reuse existing components, utilities, types, and functions before creating new ones.
+
+Before creating a new implementation, inspect the existing codebase and determine whether equivalent functionality already exists.
+
+Avoid duplicate logic.
+
+Keep components small and focused.
+
+Use TypeScript types instead of `any` wherever practical.
+
+Do not silently change the architecture.
+
+If a requested feature conflicts with this MVP scope, stop and explain the conflict before implementing it.
+
+## UI Principles
+
+The application should look like a professional modern developer tool.
+
+Prioritize:
+
+- Clean layout
+- Clear visual hierarchy
+- Consistent spacing
+- Accessible controls
+- Responsive behavior
+- Keyboard accessibility
+- Clear selected states
+- Clear drag/drop states
+- Useful empty states
+- Useful error states
+
+Do not add decorative UI that does not support the product workflow.
+
+## Code Generation
+
+Generated output must be LWC HTML only.
+
+Do not generate:
+
+- JavaScript
+- Apex
+- CSS
+- XML
+- Salesforce metadata
+
+unless explicitly requested in a future scope.
+
+## Quality
+
+Before considering a feature complete:
+
+- TypeScript must compile.
+- ESLint must pass.
+- Existing functionality must continue working.
+- No unnecessary console errors or warnings should be introduced.
+- The implementation must work in the browser.

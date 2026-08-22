@@ -1,0 +1,150 @@
+---
+description: LightningCraft MVP architecture rules
+alwaysApply: true
+---
+
+# LightningCraft MVP Architecture
+
+## Core Flow
+
+Component Metadata
+        ↓
+Component Library
+        ↓
+Drag and Drop
+        ↓
+JSON Component Tree
+        ↓
+Property Inspector
+        ↓
+Live Renderer
+        ↓
+HTML Generator
+        ↓
+Clipboard
+
+## Single Source of Truth
+
+The JSON component tree is the authoritative builder state.
+
+Do not maintain separate independent states for:
+
+- Canvas
+- Preview
+- Property Inspector
+- Generated HTML
+
+These must be derived from the central builder state.
+
+## Component Definition
+
+Components should be metadata-driven.
+
+A component definition should be capable of describing:
+
+- type
+- label
+- category
+- icon
+- default attributes
+- supported properties
+- property editor type
+- property options
+- renderer information
+- HTML generation information
+
+## Builder Node
+
+Each component placed on the canvas should have a unique identifier.
+
+Conceptually:
+
+{
+  id: string,
+  type: string,
+  attributes: Record<string, unknown>,
+  children: BuilderNode[]
+}
+
+## State Management
+
+Use Zustand for builder state.
+
+Builder actions should be explicit and reusable.
+
+Examples:
+
+- addComponent
+- removeComponent
+- updateComponent
+- moveComponent
+- duplicateComponent
+- selectComponent
+- undo
+- redo
+- clearCanvas
+
+## Rendering
+
+The renderer must render components from metadata and builder state.
+
+Do not hardcode the entire canvas based on individual component types.
+
+## Property Inspector
+
+The Property Inspector should be generated from component metadata.
+
+Avoid creating a completely separate property-panel implementation for every component.
+
+## HTML Generation
+
+HTML generation should traverse the builder tree recursively.
+
+The generator must preserve:
+
+- component hierarchy
+- supported attributes
+- nesting
+- valid LWC tag names
+
+The generated output should be formatted before being displayed or copied.
+
+## Component Extensibility Rule
+
+Every Salesforce component must be represented through a self-contained ComponentDefinition. Core LightningCraft systems must consume component definitions generically. Adding a new component must not require modifications to the drag-and-drop engine, builder tree engine, property inspector framework, component library framework, selection system, or other core systems.
+
+## Salesforce Fidelity Rule
+
+Component definitions must describe Salesforce-supported properties, valid values, composition relationships, slots, defaults, and output semantics. LightningCraft-specific convenience features must be explicitly distinguished from Salesforce-native properties.
+
+## Persistence
+
+For MVP, persistence uses browser localStorage.
+
+No backend or database is required.
+
+## Error Handling
+
+Errors should be handled at appropriate boundaries.
+
+The UI should display useful messages instead of exposing raw exceptions to users.
+
+## Performance
+
+Avoid unnecessary React re-renders.
+
+Do not perform expensive work on every keystroke unless required.
+
+Keep canvas interactions responsive.
+
+## Testing
+
+Important logic should be testable independently of the UI.
+
+Prioritize testing:
+
+- metadata
+- state mutations
+- component tree operations
+- HTML generation
+- persistence
