@@ -31,7 +31,7 @@ export default function Canvas({ isDraggingFromLibrary }: CanvasProps) {
         role="main"
         aria-label="Builder canvas"
         className={cn(
-          'flex-1 overflow-auto transition-colors duration-150',
+          'flex-1 overflow-auto overscroll-contain transition-colors duration-150 min-w-0',
           isDraggingFromLibrary && isOver ? 'bg-blue-50' : ''
         )}
         style={{
@@ -66,14 +66,17 @@ export default function Canvas({ isDraggingFromLibrary }: CanvasProps) {
               <h3 className="text-sm font-medium text-zinc-500 mb-1.5">
                 Drop Lightning components here
               </h3>
-              <p className="text-xs text-zinc-400 max-w-[200px] mx-auto leading-relaxed">
+              <p className="hidden lg:block text-xs text-zinc-400 max-w-[200px] mx-auto leading-relaxed">
                 Drag components from the left panel to start building your layout
+              </p>
+              <p className="lg:hidden text-xs text-zinc-400 max-w-[220px] mx-auto leading-relaxed">
+                Open Components, then touch and hold an item to drag it onto the canvas
               </p>
             </div>
           </div>
         ) : (
           <SortableContext items={rootNodeIds} strategy={verticalListSortingStrategy}>
-            <div className="p-6 flex flex-col gap-3 min-h-full">
+            <div className="p-3 sm:p-6 flex flex-col gap-3 min-h-full min-w-0">
               {nodes.map((node) => (
                 <CanvasNode key={node.id} node={node} />
               ))}

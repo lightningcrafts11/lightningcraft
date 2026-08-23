@@ -21,9 +21,15 @@ function matchesQuery(def: ComponentDefinition, query: string): boolean {
   );
 }
 
-function DraggableItem({ def }: { def: ComponentDefinition }) {
+function DraggableItem({
+  def,
+  instanceId,
+}: {
+  def: ComponentDefinition;
+  instanceId: string;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `library-${def.type}`,
+    id: `library-${instanceId}-${def.type}`,
     data: {
       source: 'component-library',
       componentType: def.type,
@@ -38,7 +44,7 @@ function DraggableItem({ def }: { def: ComponentDefinition }) {
       aria-label={`${def.displayName}. Drag onto the canvas`}
       title={`${def.displayName} — drag to canvas`}
       className={cn(
-        'flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-zinc-100 cursor-grab active:cursor-grabbing transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+        'flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-zinc-100 cursor-grab active:cursor-grabbing transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation',
         isDragging && 'opacity-40'
       )}
     >
@@ -56,7 +62,12 @@ function DraggableItem({ def }: { def: ComponentDefinition }) {
 // ComponentLibrary
 // ---------------------------------------------------------------------------
 
-export default function ComponentLibrary() {
+interface ComponentLibraryProps {
+  /** Distinguishes desktop vs mobile instances so dnd-kit ids stay unique. */
+  instanceId?: string;
+}
+
+export default function ComponentLibrary({ instanceId = 'default' }: ComponentLibraryProps) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -103,10 +114,13 @@ export default function ComponentLibrary() {
             className="w-full h-8 pl-8 pr-3 text-sm bg-zinc-50 border border-zinc-200 rounded-md placeholder:text-zinc-400 text-zinc-800 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
+        <p className="hidden [@media(pointer:coarse)]:block text-[11px] text-zinc-400 mt-2 leading-relaxed">
+          Touch and hold, then drag onto the canvas
+        </p>
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-y-auto overscroll-contain py-1">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <Search className="w-7 h-7 text-zinc-300 mb-2.5" aria-hidden />
@@ -139,7 +153,7 @@ export default function ComponentLibrary() {
                 {!isCollapsed && (
                   <div className="px-2 pb-1">
                     {category.items.map((def) => (
-                      <DraggableItem key={def.type} def={def} />
+                      <DraggableItem key={def.type} def={def} instanceId={instanceId} />
                     ))}
                   </div>
                 )}

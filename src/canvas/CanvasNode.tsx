@@ -190,7 +190,7 @@ function CanvasNode({ node, inHorizontalLayout = false }: CanvasNodeProps) {
           {...listeners}
           aria-label="Drag to reorder"
           title="Drag to reorder"
-          className="flex items-center gap-2 min-w-0 flex-1 px-1 cursor-grab active:cursor-grabbing"
+          className="flex items-center gap-2 min-w-0 flex-1 px-1 cursor-grab active:cursor-grabbing touch-none"
         >
           <GripVertical className="w-3.5 h-3.5 text-zinc-300 shrink-0" aria-hidden />
           {def && (

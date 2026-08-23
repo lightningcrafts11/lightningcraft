@@ -3,7 +3,8 @@
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -21,6 +22,8 @@ import PropertyPanel from '@/property-panel/PropertyPanel';
 import BuilderDeleteController from '@/builder/BuilderDeleteController';
 import PreviewSurface from '@/preview/PreviewSurface';
 import BuilderErrorBoundary from '@/builder/BuilderErrorBoundary';
+import BuilderDrawer from '@/builder/BuilderDrawer';
+import { useDesktopLayout, useMobilePanels } from '@/builder/MobilePanelsContext';
 import { createBuilderNode, getComponentDefinition, canDrop, canDropAtRoot } from '@/metadata';
 import { useBuilderStore } from '@/store/builderStore';
 import { findNodeInTree, findParentContext } from '@/utils/treeOps';
@@ -59,9 +62,15 @@ function CanvasNodeOverlay({ componentType }: { componentType: string }) {
 export default function BuilderWorkspace() {
   const [activeDragData, setActiveDragData] = useState<BuilderDragData | null>(null);
   const viewMode = useBuilderStore((s) => s.viewMode);
+  const { panel, closePanel } = useMobilePanels();
+  const isDesktop = useDesktopLayout();
 
+  // MouseSensor keeps desktop click-and-drag unchanged.
+  // TouchSensor + delay lets tablets/phones scroll lists, then press-hold to drag.
+  // Do not combine PointerSensor with TouchSensor — they compete for the same input.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -101,7 +110,14 @@ export default function BuilderWorkspace() {
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragData(event.active.data.current as BuilderDragData);
+    const data = event.active.data.current as BuilderDragData;
+    setActiveDragData(data);
+    // Keep library nodes mounted (drawer slides away) so the active drag is not cancelled.
+    closePanel();
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragData(null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -253,14 +269,18 @@ export default function BuilderWorkspace() {
       collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <BuilderDeleteController>
-        <div className="flex flex-1 overflow-hidden min-h-0">
+        <div
+          className="flex flex-1 overflow-hidden min-h-0 min-w-0"
+          inert={Boolean(panel && !activeDragData) || undefined}
+        >
           <aside
             className="hidden lg:flex w-[260px] shrink-0 flex-col overflow-hidden border-r border-zinc-200 bg-white"
             aria-label="Component library"
           >
-            <ComponentLibrary />
+            <ComponentLibrary instanceId="desktop" />
           </aside>
 
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -273,9 +293,29 @@ export default function BuilderWorkspace() {
             className="hidden lg:flex w-[300px] shrink-0 flex-col overflow-hidden border-l border-zinc-200 bg-white"
             aria-label="Property inspector"
           >
-            <PropertyPanel />
+            {isDesktop && <PropertyPanel />}
           </aside>
         </div>
+
+        <BuilderDrawer
+          id="mobile-components-drawer"
+          title="Components"
+          open={panel === 'components'}
+          side="left"
+          onClose={closePanel}
+        >
+          <ComponentLibrary instanceId="mobile" />
+        </BuilderDrawer>
+
+        <BuilderDrawer
+          id="mobile-properties-drawer"
+          title="Properties"
+          open={panel === 'properties'}
+          side="right"
+          onClose={closePanel}
+        >
+          {!isDesktop && <PropertyPanel />}
+        </BuilderDrawer>
       </BuilderDeleteController>
       <DragOverlay dropAnimation={null}>
         {activeDragData?.source === 'component-library' && (
