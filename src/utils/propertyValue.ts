@@ -10,12 +10,26 @@ export function resolvePropertyValue(
   return property.defaultValue;
 }
 
+export function valuesEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== typeof b) return false;
+  if (a === null || b === null) return a === b;
+  if (typeof a === 'object' && typeof b === 'object') {
+    try {
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 export function isAtDefault(
   attributes: Record<string, unknown>,
   property: ComponentPropertyDefinition
 ): boolean {
   if (property.defaultValue === undefined) return true;
-  return Object.is(resolvePropertyValue(attributes, property), property.defaultValue);
+  return valuesEqual(resolvePropertyValue(attributes, property), property.defaultValue);
 }
 
 export function asText(value: unknown): string {

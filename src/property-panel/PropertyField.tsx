@@ -47,7 +47,14 @@ export default function PropertyField({
             aria-label={`Reset ${property.label} to default`}
             title="Reset to default"
             disabled={!showReset}
-            onClick={() => onChange(property.name, property.defaultValue)}
+            onClick={() =>
+              onChange(
+                property.name,
+                typeof property.defaultValue === 'object' && property.defaultValue !== null
+                  ? structuredClone(property.defaultValue)
+                  : property.defaultValue
+              )
+            }
             className={cn(
               'ml-auto h-5 w-5 flex items-center justify-center rounded shrink-0 transition-colors',
               showReset

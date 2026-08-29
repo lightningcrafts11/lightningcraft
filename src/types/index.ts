@@ -3,6 +3,8 @@ export type {
   ComponentPropertyDefinition,
   ComponentCategory,
   PropertyEditorType,
+  PropertyOutputKind,
+  ObjectListItemSchema,
   SelectOption,
   SlotDefinition,
   ComponentComposition,

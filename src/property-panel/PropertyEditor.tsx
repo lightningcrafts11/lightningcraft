@@ -11,6 +11,7 @@ import {
   parseNumberInput,
 } from '@/utils/propertyValue';
 import { cn } from '@/utils/cn';
+import ObjectListEditor from './ObjectListEditor';
 
 const CONTROL_CLASS =
   'w-full h-8 rounded-md border border-zinc-200 bg-white px-2 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400';
@@ -45,6 +46,15 @@ export default function PropertyEditor({
       );
     case 'select':
       return <SelectEditor property={property} value={value} inputId={inputId} onChange={onChange} />;
+    case 'object-list':
+      return (
+        <ObjectListEditor
+          property={property}
+          value={value}
+          onChange={onChange}
+          onCommit={onCommit}
+        />
+      );
     case 'text':
     default:
       return (

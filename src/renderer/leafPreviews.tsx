@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { BuilderNode } from '@/types/builder';
 import type { ComponentDefinition, PreviewKind } from '@/types/component';
 import { cn } from '@/utils/cn';
+import DatatablePreview from '@/renderer/DatatablePreview';
 
 function str(attrs: Record<string, unknown> | undefined, key: string, fallback = ''): string {
   const v = attrs?.[key];
@@ -242,6 +243,8 @@ const LEAF_PREVIEW_RENDERERS: Record<PreviewKind, PreviewFn> = {
       </span>
     </div>
   ),
+
+  datatable: (node) => <DatatablePreview node={node} />,
 };
 
 /** Renders a lightweight visual preview from canvas.previewKind metadata. */

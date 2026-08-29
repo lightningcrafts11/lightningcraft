@@ -131,7 +131,7 @@ export function createBuilderNode(type: string): BuilderNode {
   return {
     id: crypto.randomUUID(),
     type,
-    attributes: def ? { ...def.defaultAttributes } : {},
+    attributes: def ? structuredClone(def.defaultAttributes) : {},
     slots,
   };
 }

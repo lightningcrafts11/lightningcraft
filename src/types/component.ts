@@ -2,7 +2,30 @@ import type { LucideIcon } from 'lucide-react';
 import type { StyleCapabilities } from './style';
 
 /** Supported property editor types. Extend this union to add new editor kinds. */
-export type PropertyEditorType = 'text' | 'number' | 'boolean' | 'select';
+export type PropertyEditorType = 'text' | 'number' | 'boolean' | 'select' | 'object-list';
+
+/**
+ * How a property is written to generated LWC HTML.
+ * `attribute` is a Salesforce HTML attribute. `binding` and `event` are
+ * JavaScript expressions (`name={expr}`) required by @api properties and handlers.
+ */
+export type PropertyOutputKind = 'attribute' | 'binding' | 'event';
+
+/**
+ * Schema for one item in an `object-list` property (e.g. datatable columns).
+ * Nested `visibleWhen` is evaluated against the item, not the parent node.
+ */
+export interface ObjectListItemSchema {
+  /** Object created when the user adds an item. */
+  defaultItem: Record<string, unknown>;
+  /** Item property used as the collapsed-row title. */
+  titleProperty?: string;
+  addLabel?: string;
+  emptyLabel?: string;
+  /** When set, the editor will not allow the list to shrink below this length. */
+  minItems?: number;
+  properties: ComponentPropertyDefinition[];
+}
 
 /**
  * Component library categories.
@@ -106,7 +129,8 @@ export type PreviewKind =
   | 'formatted-text'
   | 'formatted-number'
   | 'icon'
-  | 'spinner';
+  | 'spinner'
+  | 'datatable';
 
 /** One visual row of slot drop zones on the canvas. */
 export interface SlotArrangementRow {
@@ -180,6 +204,26 @@ export interface ComponentPropertyDefinition {
    * (for example `options` on lightning-combobox). Defaults to true.
    */
   htmlAttribute?: boolean;
+  /**
+   * HTML output form. Defaults to `attribute`.
+   * Use `binding` for @api values such as `data={data}`.
+   * Use `event` for handlers such as `onsort={handleSort}`.
+   */
+  outputKind?: PropertyOutputKind;
+  /**
+   * JavaScript identifier used for `binding` output when the stored value is not
+   * itself a handler/binding name (for example columns stored as an array).
+   */
+  jsBinding?: string;
+  /**
+   * For `object-list` properties: describes each list item and its editors.
+   */
+  itemSchema?: ObjectListItemSchema;
+  /**
+   * When set on an object-list item field, the value is stored on a nested
+   * object (e.g. Salesforce `typeAttributes` or `cellAttributes`).
+   */
+  nestedObject?: string;
   /**
    * When set, the inspector and HTML generator only use this property if the
    * condition matches the node's current attributes.

@@ -16,12 +16,14 @@ import { BASIC_COMPONENTS } from './components/basic';
 import { FORM_COMPONENTS } from './components/forms';
 import { LAYOUT_COMPONENTS } from './components/layout';
 import { DISPLAY_COMPONENTS } from './components/display';
+import { DATATABLE_COMPONENTS } from './components/datatable';
 
 export const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
   ...BASIC_COMPONENTS,
   ...FORM_COMPONENTS,
   ...LAYOUT_COMPONENTS,
   ...DISPLAY_COMPONENTS,
+  ...DATATABLE_COMPONENTS,
 ];
 
 export const COMPONENT_DEFINITION_MAP: ReadonlyMap<string, ComponentDefinition> = new Map(

@@ -120,7 +120,9 @@ function collectAttributes(
   let classFromProperty: string | undefined;
 
   for (const property of def.properties) {
-    if (property.htmlAttribute === false) continue;
+    if (property.outputKind !== 'binding' && property.outputKind !== 'event') {
+      if (property.htmlAttribute === false) continue;
+    }
     if (!isPropertyVisible(property, resolved)) continue;
 
     const value = resolveOutputValue(node, property);
@@ -175,9 +177,20 @@ function serializeAttribute(
   property: ComponentPropertyDefinition,
   value: unknown
 ): string | null {
-  if (value === undefined || value === null) return null;
-
   const name = property.attributeName ?? property.name;
+  const outputKind = property.outputKind ?? 'attribute';
+
+  if (outputKind === 'binding') {
+    const expression = bindingExpression(property, value);
+    return expression ? `${name}={${expression}}` : null;
+  }
+
+  if (outputKind === 'event') {
+    const handler = typeof value === 'string' ? value.trim() : '';
+    return handler && isSafeJsIdentifier(handler) ? `${name}={${handler}}` : null;
+  }
+
+  if (value === undefined || value === null) return null;
 
   if (property.type === 'boolean') {
     return value === true ? name : null;
@@ -200,6 +213,38 @@ function serializeAttribute(
   }
 
   return null;
+}
+
+function bindingExpression(
+  property: ComponentPropertyDefinition,
+  value: unknown
+): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      return property.required ? safeBinding(property.jsBinding, property) : null;
+    }
+    return isSafeJsIdentifier(trimmed) ? trimmed : null;
+  }
+
+  return safeBinding(property.jsBinding, property);
+}
+
+function safeBinding(
+  jsBinding: string | undefined,
+  property: ComponentPropertyDefinition
+): string | null {
+  if (jsBinding && isSafeJsIdentifier(jsBinding)) return jsBinding;
+  const fallback = toCamelIdentifier(property.attributeName ?? property.name);
+  return fallback && isSafeJsIdentifier(fallback) ? fallback : null;
+}
+
+function toCamelIdentifier(name: string): string {
+  return name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
+function isSafeJsIdentifier(value: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
 }
 
 function escapeAttr(value: string): string {
