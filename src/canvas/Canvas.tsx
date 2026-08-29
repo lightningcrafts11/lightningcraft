@@ -28,7 +28,7 @@ export default function Canvas({ isDraggingFromLibrary }: CanvasProps) {
     <div className="flex-1 flex flex-col overflow-hidden relative">
       <div
         ref={setNodeRef}
-        role="main"
+        role="region"
         aria-label="Builder canvas"
         className={cn(
           'flex-1 overflow-auto overscroll-contain transition-colors duration-150 min-w-0',

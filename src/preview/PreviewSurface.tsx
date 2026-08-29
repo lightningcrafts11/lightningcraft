@@ -51,7 +51,7 @@ export default function PreviewSurface() {
           <span className="text-[11px] text-zinc-400">{width}px</span>
         </div>
 
-        <div role="main" aria-label="Preview" className="flex-1 overflow-auto">
+        <section aria-label="Preview" className="flex-1 overflow-auto">
           {nodes.length === 0 ? (
             <div className="h-full flex items-center justify-center px-6">
               <div className="text-center select-none">
@@ -73,7 +73,7 @@ export default function PreviewSurface() {
               </div>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </PreviewViewportContext.Provider>
   );

@@ -10,7 +10,9 @@ export default function AppShell() {
     <MobilePanelsProvider>
       <div className="flex flex-col h-dvh max-h-dvh overflow-hidden">
         <Header />
-        <BuilderWorkspace />
+        <main className="flex flex-1 min-h-0 min-w-0 overflow-hidden flex-col">
+          <BuilderWorkspace />
+        </main>
         <StatusBar />
       </div>
     </MobilePanelsProvider>

@@ -83,6 +83,7 @@ export default function Header() {
 
   return (
     <header className="h-14 bg-zinc-900 border-b border-zinc-700 flex items-center px-2 lg:px-4 shrink-0 z-40 min-w-0">
+      <h1 className="sr-only">LightningCraft</h1>
       {/* Desktop brand — unchanged at lg+ */}
       <div className="hidden lg:flex items-center gap-2 w-[220px]">
         <div className="flex items-center gap-1.5 text-white">
