@@ -11,6 +11,12 @@ export type PropertyEditorType = 'text' | 'number' | 'boolean' | 'select' | 'obj
  */
 export type PropertyOutputKind = 'attribute' | 'binding' | 'event';
 
+/** How a binding or event is represented in generated LWC JavaScript. */
+export type JsRole = 'internal-field' | 'api' | 'handler';
+
+/** How an internal or @api field is initialized in generated JavaScript. */
+export type JsInitializer = 'literal' | 'empty-array' | 'empty-object' | 'none';
+
 /**
  * Schema for one item in an `object-list` property (e.g. datatable columns).
  * Nested `visibleWhen` is evaluated against the item, not the parent node.
@@ -215,6 +221,23 @@ export interface ComponentPropertyDefinition {
    * itself a handler/binding name (for example columns stored as an array).
    */
   jsBinding?: string;
+  /**
+   * How this property appears in generated LWC JavaScript.
+   * Defaults from `outputKind`: binding → internal-field, event → handler.
+   */
+  jsRole?: JsRole;
+  /**
+   * How to initialize a generated class field. Ignored for handlers.
+   * `literal` emits the stored (serialized) value. `empty-array` / `empty-object`
+   * are placeholders for runtime data. `none` emits a bare field (typical for @api).
+   */
+  jsInitializer?: JsInitializer;
+  /**
+   * Converts a structured inspector value into a Salesforce-shaped JS value.
+   * Used for object-list properties such as datatable columns. Must strip
+   * LightningCraft-only keys (e.g. lcKey).
+   */
+  serializeJsValue?: (value: unknown) => unknown;
   /**
    * For `object-list` properties: describes each list item and its editors.
    */

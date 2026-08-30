@@ -1,8 +1,5 @@
-export interface GenerationError {
-  nodeId: string;
-  componentType: string;
-  message: string;
-}
+export type { GenerationError } from '@/types/lwcExport';
+import type { GenerationError } from '@/types/lwcExport';
 
 export interface GenerateLwcHtmlResult {
   html: string;

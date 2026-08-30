@@ -17,11 +17,27 @@ export type {
   ResponsiveBreakpoint,
   PropertyCondition,
   PropertyConditionOperator,
+  JsRole,
+  JsInitializer,
 } from './component';
 
 export { COMPONENT_CATEGORIES } from './component';
 
 export type { BuilderNode } from './builder';
+
+export type {
+  LwcExportSettings,
+  JsField,
+  JsHandler,
+  JsImport,
+  BindingAssignment,
+  LwcBundlePlan,
+  LwcBundleFiles,
+  LwcBundleResult,
+  GenerationError,
+} from './lwcExport';
+
+export { DEFAULT_LWC_EXPORT_SETTINGS } from './lwcExport';
 
 export type {
   SpacingConfig,

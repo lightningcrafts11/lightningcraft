@@ -12,6 +12,9 @@ import { getComponentDefinition } from '@/metadata';
 import type { GenerateLwcHtmlResult, GenerationError } from './types';
 import { isPropertyVisible, resolveAttributesForVisibility } from '@/utils/propertyVisibility';
 import { mergeClassNames, spacingToSldsClasses } from '@/utils/spacing';
+import { collectJsPlan } from './collectJsPlan';
+import { isValidJsBindingName } from './jsIdentifiers';
+import type { LwcBundlePlan } from '@/types/lwcExport';
 
 const INDENT = '    ';
 
@@ -21,12 +24,17 @@ export type { GenerateLwcHtmlResult, GenerationError } from './types';
  * Convert a builder tree into Salesforce LWC HTML.
  * Unknown nodes are skipped and reported; generation continues.
  */
-export function generateLwcHtml(tree: BuilderNode[]): GenerateLwcHtmlResult {
+export function generateLwcHtml(
+  tree: BuilderNode[],
+  plan?: LwcBundlePlan
+): GenerateLwcHtmlResult {
   const errors: GenerationError[] = [];
   const blocks: string[] = [];
+  const resolvedPlan = plan ?? collectJsPlan(tree);
+  errors.push(...resolvedPlan.errors);
 
   for (const node of tree) {
-    const html = emitNode(node, 0, undefined, errors);
+    const html = emitNode(node, 0, undefined, errors, resolvedPlan);
     if (html) blocks.push(html);
   }
 
@@ -40,28 +48,24 @@ function emitNode(
   node: BuilderNode,
   depth: number,
   slotName: string | undefined,
-  errors: GenerationError[]
+  errors: GenerationError[],
+  plan: LwcBundlePlan
 ): string {
   const def = getComponentDefinition(node.type);
   if (!def) {
-    errors.push({
-      nodeId: node.id,
-      componentType: node.type,
-      message: `No ComponentDefinition is registered for type "${node.type}".`,
-    });
     return '';
   }
 
   const pad = INDENT.repeat(depth);
   const attrPad = INDENT.repeat(depth + 1);
   const tag = def.output.tagName;
-  const attributes = collectAttributes(node, def, errors);
+  const attributes = collectAttributes(node, def, errors, plan);
 
   if (slotName) {
     attributes.unshift(`slot="${escapeAttr(slotName)}"`);
   }
 
-  const childBlocks = emitChildren(node, def, depth + 1, errors);
+  const childBlocks = emitChildren(node, def, depth + 1, errors, plan);
   const open = formatOpenTag(pad, attrPad, tag, attributes);
 
   if (childBlocks.length === 0) {
@@ -87,7 +91,8 @@ function emitChildren(
   node: BuilderNode,
   def: ComponentDefinition,
   childDepth: number,
-  errors: GenerationError[]
+  errors: GenerationError[],
+  plan: LwcBundlePlan
 ): string[] {
   const slotDefs = def.composition.slots ?? [];
   const blocks: string[] = [];
@@ -96,7 +101,7 @@ function emitChildren(
     const children = node.slots?.[slotDef.name] ?? [];
     const assignedSlot = salesforceSlotName(slotDef);
     for (const child of children) {
-      const html = emitNode(child, childDepth, assignedSlot, errors);
+      const html = emitNode(child, childDepth, assignedSlot, errors, plan);
       if (html) blocks.push(html);
     }
   }
@@ -113,7 +118,8 @@ function salesforceSlotName(slotDef: SlotDefinition): string | undefined {
 function collectAttributes(
   node: BuilderNode,
   def: ComponentDefinition,
-  errors: GenerationError[]
+  errors: GenerationError[],
+  plan: LwcBundlePlan
 ): string[] {
   const attributes: string[] = [];
   const resolved = resolveAttributesForVisibility(def, node.attributes ?? {});
@@ -126,7 +132,8 @@ function collectAttributes(
     if (!isPropertyVisible(property, resolved)) continue;
 
     const value = resolveOutputValue(node, property);
-    const serialized = serializeAttribute(property, value);
+    const assigned = assignedIdentifier(plan, node.id, property.name);
+    const serialized = serializeAttribute(property, value, assigned);
 
     if (serialized !== null) {
       const name = property.attributeName ?? property.name;
@@ -175,19 +182,17 @@ function isMissingValue(value: unknown): boolean {
  */
 function serializeAttribute(
   property: ComponentPropertyDefinition,
-  value: unknown
+  value: unknown,
+  assigned: string | undefined
 ): string | null {
   const name = property.attributeName ?? property.name;
   const outputKind = property.outputKind ?? 'attribute';
 
-  if (outputKind === 'binding') {
-    const expression = bindingExpression(property, value);
-    return expression ? `${name}={${expression}}` : null;
-  }
-
-  if (outputKind === 'event') {
-    const handler = typeof value === 'string' ? value.trim() : '';
-    return handler && isSafeJsIdentifier(handler) ? `${name}={${handler}}` : null;
+  if (outputKind === 'binding' || outputKind === 'event') {
+    if (assigned && isValidJsBindingName(assigned)) {
+      return `${name}={${assigned}}`;
+    }
+    return null;
   }
 
   if (value === undefined || value === null) return null;
@@ -215,36 +220,14 @@ function serializeAttribute(
   return null;
 }
 
-function bindingExpression(
-  property: ComponentPropertyDefinition,
-  value: unknown
-): string | null {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed === '') {
-      return property.required ? safeBinding(property.jsBinding, property) : null;
-    }
-    return isSafeJsIdentifier(trimmed) ? trimmed : null;
-  }
-
-  return safeBinding(property.jsBinding, property);
-}
-
-function safeBinding(
-  jsBinding: string | undefined,
-  property: ComponentPropertyDefinition
-): string | null {
-  if (jsBinding && isSafeJsIdentifier(jsBinding)) return jsBinding;
-  const fallback = toCamelIdentifier(property.attributeName ?? property.name);
-  return fallback && isSafeJsIdentifier(fallback) ? fallback : null;
-}
-
-function toCamelIdentifier(name: string): string {
-  return name.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
-}
-
-function isSafeJsIdentifier(value: string): boolean {
-  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
+function assignedIdentifier(
+  plan: LwcBundlePlan,
+  nodeId: string,
+  propertyName: string
+): string | undefined {
+  return plan.assignments.find(
+    (assignment) => assignment.nodeId === nodeId && assignment.propertyName === propertyName
+  )?.identifier;
 }
 
 function escapeAttr(value: string): string {

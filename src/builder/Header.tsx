@@ -7,6 +7,7 @@ import { useBuilderStore } from '@/store/builderStore';
 import { copyTextToClipboard } from '@/utils/clipboard';
 import { isRedoShortcut, isUndoShortcut } from '@/history';
 import { useMobilePanels } from '@/builder/MobilePanelsContext';
+import ExportLwcAction from '@/builder/ExportLwcAction';
 import { cn } from '@/utils/cn';
 
 type ExportStatus = 'idle' | 'copied' | 'error';
@@ -144,7 +145,7 @@ export default function Header() {
       <div className="flex-1 lg:hidden min-w-0" />
 
       {/* Actions — same controls on all widths; labels compact below lg */}
-      <div className="flex items-center gap-0.5 lg:gap-1 lg:w-[220px] justify-end shrink-0">
+      <div className="flex items-center gap-0.5 lg:gap-1 lg:min-w-[220px] justify-end shrink-0">
         <div className="flex items-center">
           <button
             type="button"
@@ -185,6 +186,8 @@ export default function Header() {
           {isPreview ? <Pencil className="w-3.5 h-3.5" aria-hidden /> : <Eye className="w-3.5 h-3.5" aria-hidden />}
           <span className="hidden min-[400px]:inline">{isPreview ? 'Edit' : 'Preview'}</span>
         </button>
+
+        <ExportLwcAction />
 
         <button
           type="button"
