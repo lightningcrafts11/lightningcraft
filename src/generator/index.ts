@@ -10,5 +10,6 @@ export type {
   LwcBundleResult,
   LwcBundlePlan,
   LwcExportSettings,
+  JsClassExtends,
 } from '@/types/lwcExport';
-export { DEFAULT_LWC_EXPORT_SETTINGS } from '@/types/lwcExport';
+export { DEFAULT_LWC_EXPORT_SETTINGS, DEFAULT_LWC_CLASS_EXTENDS } from '@/types/lwcExport';

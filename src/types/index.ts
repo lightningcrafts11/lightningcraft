@@ -10,6 +10,8 @@ export type {
   ComponentComposition,
   CanvasBehavior,
   HtmlOutputBehavior,
+  JsClassBehavior,
+  JsClassExtends,
   PreviewKind,
   SlotArrangement,
   SlotArrangementRow,
@@ -37,7 +39,7 @@ export type {
   GenerationError,
 } from './lwcExport';
 
-export { DEFAULT_LWC_EXPORT_SETTINGS } from './lwcExport';
+export { DEFAULT_LWC_EXPORT_SETTINGS, DEFAULT_LWC_CLASS_EXTENDS } from './lwcExport';
 
 export type {
   SpacingConfig,

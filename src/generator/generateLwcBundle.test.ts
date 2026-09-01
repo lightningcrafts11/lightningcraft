@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createBuilderNode } from '@/metadata';
+import { createBuilderNode, getComponentDefinition } from '@/metadata';
 import {
   collectJsPlan,
   generateLwcBundle,
@@ -173,6 +173,10 @@ describe('generateLwcBundle', () => {
   });
 
   it('emits combobox options as a JS binding with a warning when options are unstructured', () => {
+    const optionsProperty = getComponentDefinition('lightning-combobox')?.properties.find(
+      (property) => property.name === 'options'
+    );
+    expect(optionsProperty?.warnWhenUnstructuredOptions).toBe(true);
     const node = createBuilderNode('lightning-combobox');
     const result = bundle([node]);
     expect(result.files.html).toContain('options={options}');
@@ -276,5 +280,51 @@ describe('collectJsPlan', () => {
     const plan = collectJsPlan([node]);
     expect(plan.handlers).toEqual([{ name: 'handleShared' }]);
     expect(plan.assignments.filter((item) => item.identifier === 'handleShared')).toHaveLength(2);
+  });
+
+  it('uses default LightningElement class metadata when no jsClass is declared', () => {
+    const plan = collectJsPlan([createBuilderNode('lightning-button')]);
+    expect(plan.classExtends).toEqual({
+      name: 'LightningElement',
+      module: 'lwc',
+      importKind: 'named',
+    });
+    expect(plan.imports).toEqual([{ module: 'lwc', named: ['LightningElement'] }]);
+  });
+
+  it('reads LightningModal class inheritance from component metadata', () => {
+    const plan = collectJsPlan([createBuilderNode('LightningModal')]);
+    expect(plan.classExtends).toEqual({
+      name: 'LightningModal',
+      module: 'lightning/modal',
+      importKind: 'default',
+    });
+    expect(plan.imports).toEqual([
+      { module: 'lightning/modal', named: [], defaultImport: 'LightningModal' },
+    ]);
+  });
+
+  it('does not apply nested LightningModal class metadata to a parent LightningElement bundle', () => {
+    const card = createBuilderNode('lightning-card');
+    card.slots.default = [createBuilderNode('LightningModal')];
+    const plan = collectJsPlan([card]);
+    expect(plan.classExtends).toEqual({
+      name: 'LightningElement',
+      module: 'lwc',
+      importKind: 'named',
+    });
+    expect(plan.errors.some((error) => error.message.includes('Multi-LWC export is not supported'))).toBe(
+      true
+    );
+    expect(plan.imports).toEqual([{ module: 'lwc', named: ['LightningElement'] }]);
+  });
+
+  it('errors when a handler identifier collides with a generated field', () => {
+    const node = createBuilderNode('lightning-datatable');
+    node.attributes.onsort = 'columns';
+    const plan = collectJsPlan([node]);
+    expect(
+      plan.errors.some((error) => error.message.includes('both a field and an event handler'))
+    ).toBe(true);
   });
 });

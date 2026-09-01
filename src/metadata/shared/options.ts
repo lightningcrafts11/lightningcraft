@@ -196,3 +196,16 @@ export const SPINNER_VARIANT_OPTIONS: SelectOption[] = [
   { label: 'Brand', value: 'brand' },
   { label: 'Inverse', value: 'inverse' },
 ];
+
+/** lightning-record-*-form density. Official default is auto. */
+export const RECORD_FORM_DENSITY_OPTIONS: SelectOption[] = [
+  { label: 'Auto', value: 'auto' },
+  { label: 'Comfy', value: 'comfy' },
+  { label: 'Compact', value: 'compact' },
+];
+
+/** lightning-output-field variant. Official values: standard, label-hidden. */
+export const OUTPUT_FIELD_VARIANT_OPTIONS: SelectOption[] = [
+  { label: 'Standard', value: 'standard' },
+  { label: 'Label Hidden', value: 'label-hidden' },
+];

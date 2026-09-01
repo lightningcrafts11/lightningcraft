@@ -105,6 +105,17 @@ export function findParentContext(
   return searchParentInNodes(roots, id);
 }
 
+/** Types of ancestors from nearest parent up to the canvas root. Does not include `id`. */
+export function findAncestorTypes(roots: BuilderNode[], id: string): string[] {
+  const types: string[] = [];
+  let ctx = findParentContext(roots, id);
+  while (ctx?.kind === 'slot') {
+    types.push(ctx.parentNode.type);
+    ctx = findParentContext(roots, ctx.parentNode.id);
+  }
+  return types;
+}
+
 function searchParentInNodes(
   nodes: BuilderNode[],
   id: string

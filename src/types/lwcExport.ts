@@ -1,6 +1,8 @@
-import type { JsInitializer, JsRole } from './component';
+import type { JsClassExtends, JsInitializer, JsRole } from './component';
+import { DEFAULT_LWC_CLASS_EXTENDS } from './component';
 
-export type { JsInitializer, JsRole };
+export type { JsInitializer, JsRole, JsClassExtends };
+export { DEFAULT_LWC_CLASS_EXTENDS };
 
 export interface GenerationError {
   nodeId: string;
@@ -64,6 +66,8 @@ export interface LwcBundlePlan {
   assignments: BindingAssignment[];
   errors: GenerationError[];
   warnings: GenerationError[];
+  /** Class the generated LWC extends. Always set by the planner from metadata. */
+  classExtends: JsClassExtends;
 }
 
 export interface LwcBundleFiles {

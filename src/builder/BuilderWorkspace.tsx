@@ -26,7 +26,7 @@ import BuilderDrawer from '@/builder/BuilderDrawer';
 import { useDesktopLayout, useMobilePanels } from '@/builder/MobilePanelsContext';
 import { createBuilderNode, getComponentDefinition, canDrop, canDropAtRoot } from '@/metadata';
 import { useBuilderStore } from '@/store/builderStore';
-import { findNodeInTree, findParentContext } from '@/utils/treeOps';
+import { findNodeInTree, findParentContext, findAncestorTypes } from '@/utils/treeOps';
 import type { BuilderDragData } from '@/store/dragTypes';
 
 // ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ export default function BuilderWorkspace() {
       if (overId.startsWith('slot:')) {
         const [, parentId, slotName] = overId.split(':');
         const parent = findNodeInTree(nodes, parentId);
-        if (parent && canDrop(componentType, parent.type, slotName)) {
+        if (parent && canDrop(componentType, parent.type, slotName, findAncestorTypes(nodes, parent.id))) {
           const node = createBuilderNode(componentType);
           addNodeToSlot(parentId, slotName, node);
           selectNode(node.id);
@@ -181,7 +181,7 @@ export default function BuilderWorkspace() {
 
       // ctx.kind === 'slot'
       const { parentNode, slotName, index } = ctx;
-      if (canDrop(componentType, parentNode.type, slotName)) {
+      if (canDrop(componentType, parentNode.type, slotName, findAncestorTypes(nodes, parentNode.id))) {
         const node = createBuilderNode(componentType);
         addNodeToSlot(parentNode.id, slotName, node, index);
         selectNode(node.id);
@@ -199,7 +199,7 @@ export default function BuilderWorkspace() {
       if (overId.startsWith('slot:')) {
         const [, targetParentId, targetSlotName] = overId.split(':');
         const targetParent = findNodeInTree(nodes, targetParentId);
-        if (targetParent && canDrop(componentType, targetParent.type, targetSlotName)) {
+        if (targetParent && canDrop(componentType, targetParent.type, targetSlotName, findAncestorTypes(nodes, targetParent.id))) {
           const slotLen = targetParent.slots?.[targetSlotName]?.length ?? 0;
           moveNode(nodeId, targetParentId, targetSlotName, slotLen);
         }
@@ -243,7 +243,12 @@ export default function BuilderWorkspace() {
         moveNode(nodeId, null, 'default', overCtx.index);
       } else if (
         overCtx.kind === 'slot' &&
-        canDrop(componentType, overCtx.parentNode.type, overCtx.slotName)
+        canDrop(
+          componentType,
+          overCtx.parentNode.type,
+          overCtx.slotName,
+          findAncestorTypes(nodes, overCtx.parentNode.id)
+        )
       ) {
         moveNode(nodeId, overCtx.parentNode.id, overCtx.slotName, overCtx.index);
       }

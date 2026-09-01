@@ -1,6 +1,7 @@
 import { COMPONENT_DEFINITIONS, COMPONENT_DEFINITION_MAP } from './registry';
 import type { ComponentCategory, ComponentDefinition, SlotDefinition } from '@/types/component';
 import type { BuilderNode } from '@/types/builder';
+import { findAncestorTypes, findNodeInTree } from '@/utils/treeOps';
 
 export { COMPONENT_DEFINITIONS } from './registry';
 
@@ -65,9 +66,17 @@ export function isComposable(type: string): boolean {
 // ---------------------------------------------------------------------------
 
 function typeAllowedByList(sourceType: string, allowed: string[] | undefined): boolean {
-  if (!allowed || allowed.length === 0) return true;
+  if (!allowed) return true;
   if (allowed.includes('*')) return true;
   return allowed.includes(sourceType);
+}
+
+/**
+ * Unnamed default content (no Salesforce slot="…"). Named regions such as
+ * card title/actions/footer are not general content.
+ */
+export function isGeneralContentSlot(slotDef: SlotDefinition): boolean {
+  return slotDef.isDefault === true && !slotDef.salesforceSlot;
 }
 
 /**
@@ -77,11 +86,19 @@ function typeAllowedByList(sourceType: string, allowed: string[] | undefined): b
  *   1. Target accepts children and exposes the named slot.
  *   2. Source is not in the slot's excludedTypes.
  *   3. Source is in the slot's allowedTypes (or the slot allows '*').
- *   4. Target is in the source's allowedParents (when specified).
+ *   4. Source is not rootOnly.
+ *   5. nestedAuthoring sources only enter general-content slots.
+ *   6. Immediate parent is in allowedParents, or allowedParentsWithAncestor
+ *      matches the immediate parent plus `ancestorTypes`.
  *
  * Adding a new component never requires changing this function.
  */
-export function canDrop(sourceType: string, targetType: string, slotName: string): boolean {
+export function canDrop(
+  sourceType: string,
+  targetType: string,
+  slotName: string,
+  ancestorTypes: readonly string[] = []
+): boolean {
   const targetDef = getComponentDefinition(targetType);
   if (!targetDef?.composition.acceptsChildren) return false;
 
@@ -92,13 +109,56 @@ export function canDrop(sourceType: string, targetType: string, slotName: string
   if (!typeAllowedByList(sourceType, slotDef.allowedTypes)) return false;
 
   const sourceDef = getComponentDefinition(sourceType);
-  if (sourceDef?.composition.allowedParents) {
-    if (!typeAllowedByList(targetType, sourceDef.composition.allowedParents)) {
-      return false;
-    }
+  if (sourceDef?.composition.rootOnly) return false;
+  if (sourceDef?.composition.nestedAuthoring && !isGeneralContentSlot(slotDef)) {
+    return false;
+  }
+  if (!parentAllowed(sourceDef?.composition, targetType, ancestorTypes)) {
+    return false;
   }
 
   return true;
+}
+
+/**
+ * Drop validation using the live builder tree so ancestor-aware rules can run.
+ */
+export function canDropOnNode(
+  sourceType: string,
+  tree: BuilderNode[],
+  targetNodeId: string,
+  slotName: string
+): boolean {
+  const target = findNodeInTree(tree, targetNodeId);
+  if (!target) return false;
+  return canDrop(
+    sourceType,
+    target.type,
+    slotName,
+    findAncestorTypes(tree, targetNodeId)
+  );
+}
+
+function parentAllowed(
+  composition: ComponentDefinition['composition'] | undefined,
+  targetType: string,
+  ancestorTypes: readonly string[]
+): boolean {
+  if (!composition) return true;
+  const { allowedParents, allowedParentsWithAncestor } = composition;
+  if (!allowedParents && !allowedParentsWithAncestor) return true;
+
+  if (allowedParents && typeAllowedByList(targetType, allowedParents)) return true;
+
+  if (allowedParentsWithAncestor) {
+    const parentOk = typeAllowedByList(targetType, allowedParentsWithAncestor.parents);
+    const ancestorOk = allowedParentsWithAncestor.ancestors.some((type) =>
+      ancestorTypes.includes(type)
+    );
+    if (parentOk && ancestorOk) return true;
+  }
+
+  return false;
 }
 
 /**

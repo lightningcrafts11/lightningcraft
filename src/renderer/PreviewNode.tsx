@@ -13,6 +13,10 @@ import {
 import { getLayoutItemStyle } from '@/utils/layoutGrid';
 import { spacingToCssProperties } from '@/utils/spacing';
 import { usePreviewViewport } from '@/preview/PreviewViewportContext';
+import {
+  slotFallbackPrimary,
+  slotFallbackSecondary,
+} from '@/renderer/slotPreview';
 
 interface PreviewNodeProps {
   node: BuilderNode;
@@ -66,11 +70,17 @@ function PreviewSlot({
   const isHorizontal = slotDef.layout === 'horizontal';
 
   if (children.length === 0) {
-    const fallback = parentNode.attributes[slotDef.name];
-    if (typeof fallback === 'string' && fallback !== '') {
-      return <span className="text-[15px] font-semibold text-zinc-900">{fallback}</span>;
-    }
-    return null;
+    const primary = slotFallbackPrimary(parentNode, slotDef);
+    const secondary = slotFallbackSecondary(parentNode, slotDef);
+    if (!primary && !secondary) return null;
+    return (
+      <div className="flex flex-col gap-0.5 min-w-0">
+        {primary && (
+          <span className="text-[15px] font-semibold text-zinc-900">{primary}</span>
+        )}
+        {secondary && <span className="text-xs text-zinc-500">{secondary}</span>}
+      </div>
+    );
   }
 
   return (

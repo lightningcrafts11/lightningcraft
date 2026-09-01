@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { BuilderNode } from '@/types/builder';
 import type { ComponentDefinition, SlotDefinition } from '@/types/component';
 import { cn } from '@/utils/cn';
+import { slotHasPreviewFallback } from '@/renderer/slotPreview';
 
 interface ContainerSlotsProps {
   node: BuilderNode;
@@ -15,8 +16,7 @@ interface ContainerSlotsProps {
 function isSlotEmptyForPreview(node: BuilderNode, slotDef: SlotDefinition): boolean {
   const children = node.slots?.[slotDef.name] ?? [];
   if (children.length > 0) return false;
-  const attr = node.attributes[slotDef.name];
-  return !(typeof attr === 'string' && attr !== '');
+  return !slotHasPreviewFallback(node, slotDef);
 }
 
 /**
@@ -39,7 +39,8 @@ export default function ContainerSlots({
         className={cn(
           mode === 'preview'
             ? 'bg-white rounded-lg border border-zinc-200 shadow-sm overflow-hidden'
-            : 'border-t border-zinc-100 overflow-hidden rounded-b-[6px]'
+            : 'border-t border-zinc-100 overflow-hidden rounded-b-[6px]',
+          def.canvas.kind === 'container' ? def.canvas.previewClass : undefined
         )}
       >
         {arrangement.rows.map((row, rowIndex) => {
@@ -94,7 +95,8 @@ export default function ContainerSlots({
   return (
     <div
       className={cn(
-        mode === 'builder' ? 'border-t border-zinc-100 p-2 flex flex-col gap-2' : 'flex flex-col min-w-0'
+        mode === 'builder' ? 'border-t border-zinc-100 p-2 flex flex-col gap-2' : 'flex flex-col min-w-0',
+        def.canvas.kind === 'container' ? def.canvas.previewClass : undefined
       )}
     >
       {slots.map((slotDef) => {

@@ -77,7 +77,8 @@ export interface SlotDefinition {
   /**
    * Allowed LWC type names for this slot.
    * Use ['*'] to allow any component type (subject to excludedTypes and the
-   * source component's allowedParents).
+   * source component's allowedParents / allowedParentsWithAncestor).
+   * An empty array allows no children. Omit only when a wrapper is property-driven.
    */
   allowedTypes: string[];
   /**
@@ -87,6 +88,31 @@ export interface SlotDefinition {
   excludedTypes?: string[];
   /** Visual layout direction for children in the canvas. Defaults to 'vertical'. */
   layout?: 'horizontal' | 'vertical';
+  /**
+   * Salesforce tag that wraps this slot's children in generated HTML.
+   * Used when the parent unwraps (no host tag) and the slot maps to a helper
+   * component such as lightning-modal-body.
+   */
+  wrapperTag?: string;
+  /**
+   * Parent property names written as attributes on wrapperTag.
+   * Not emitted on the parent node when output.unwrap is true.
+   */
+  wrapperAttributes?: string[];
+  /**
+   * Parent attribute emitted as text content inside wrapperTag.
+   * Used for Salesforce default-slot text such as a modal header tagline.
+   */
+  wrapperTextProperty?: string;
+  /** Emit wrapperTag even when the slot has no children and no wrapper text. */
+  emitWrapperWhenEmpty?: boolean;
+  /**
+   * Parent attribute used as design-time preview text when the slot has no children.
+   * Defaults to the slot name.
+   */
+  previewAttribute?: string;
+  /** Optional second parent attribute shown under the primary preview text. */
+  previewSecondaryAttribute?: string;
 }
 
 /**
@@ -103,10 +129,21 @@ export interface ComponentComposition {
    */
   allowAtRoot?: boolean;
   /**
-   * Parent component types this component may be placed into.
+   * Parent component types this component may be placed into as a direct child.
    * Omit or use ['*'] to allow any parent whose slot accepts this type.
    */
   allowedParents?: string[];
+  /**
+   * Additional immediate parents allowed only when one of `ancestors` is already
+   * in the target's ancestor chain. Slot allowedTypes still apply.
+   *
+   * Used for Salesforce wrappers such as lightning-layout-item inside a
+   * lightning-record-*-form, without globally allowing the child under that parent.
+   */
+  allowedParentsWithAncestor?: {
+    parents: string[];
+    ancestors: string[];
+  };
   /**
    * Component-level child summary. Slot allowedTypes remain authoritative
    * for drop validation; this field documents the relationship for future systems.
@@ -116,6 +153,24 @@ export interface ComponentComposition {
   slots?: SlotDefinition[];
   /** Slot name used when a caller does not specify one. Typically 'default'. */
   defaultSlot?: string;
+  /**
+   * When true, this component may only be placed at the canvas root.
+   * Nested drops are rejected even if a parent slot allows '*'.
+   * Do not combine with nestedAuthoring.
+   */
+  rootOnly?: boolean;
+  /**
+   * When true, this class-owning component may be nested in general-content
+   * slots as an authoring stand-in for a separate LWC.
+   *
+   * General content means an unnamed default slot (isDefault, no salesforceSlot).
+   * Named Salesforce slots (slot="title", slot="actions", slot="footer") reject it.
+   *
+   * Nested instances remain on the canvas for design. The single-bundle exporter
+   * must not unwrap them into the parent HTML or apply their jsClass to the parent.
+   * Export fails with a generation error until multi-LWC export exists.
+   */
+  nestedAuthoring?: boolean;
 }
 
 /**
@@ -136,7 +191,10 @@ export type PreviewKind =
   | 'formatted-number'
   | 'icon'
   | 'spinner'
-  | 'datatable';
+  | 'datatable'
+  | 'input-field'
+  | 'output-field'
+  | 'messages';
 
 /** One visual row of slot drop zones on the canvas. */
 export interface SlotArrangementRow {
@@ -169,6 +227,8 @@ export type CanvasBehavior =
   | {
       kind: 'container';
       slotArrangement?: SlotArrangement;
+      /** Optional extra classes on the design-time container surface. */
+      previewClass?: string;
     };
 
 /**
@@ -177,6 +237,51 @@ export type CanvasBehavior =
 export interface HtmlOutputBehavior {
   /** Salesforce LWC tag written to HTML, e.g. 'lightning-button'. */
   tagName: string;
+  /**
+   * When true, this node is not written as an HTML element.
+   * Slot wrappers and children are emitted in its place.
+   * Use when Salesforce has no host tag (for example LightningModal).
+   */
+  unwrap?: boolean;
+}
+
+/**
+ * How this component affects the generated LWC JavaScript class.
+ * Consumed generically by the JS planner — not a per-component generator branch.
+ */
+export type JsModuleImportKind = 'default' | 'named';
+
+export interface JsClassExtends {
+  /** JavaScript identifier used in `export default class X extends Name`. */
+  name: string;
+  /** Module specifier, e.g. 'lwc' or 'lightning/modal'. */
+  module: string;
+  /** Whether `name` is the default export or a named export of `module`. */
+  importKind: JsModuleImportKind;
+}
+
+/**
+ * Default generated class when a canvas has no `jsClass` metadata.
+ * LightningElement is the Salesforce default for ordinary LWCs.
+ */
+export const DEFAULT_LWC_CLASS_EXTENDS: JsClassExtends = {
+  name: 'LightningElement',
+  module: 'lwc',
+  importKind: 'named',
+};
+
+export interface JsClassBehavior {
+  /** Class the generated LWC extends, including how to import it. */
+  extends: JsClassExtends;
+  /**
+   * Extra imports this component requires in the generated JavaScript.
+   * Merged generically with planner-derived imports (`api`, base class).
+   */
+  imports?: Array<{
+    module: string;
+    named: string[];
+    defaultImport?: string;
+  }>;
 }
 
 /** Describes a single configurable property on a component. */
@@ -232,6 +337,11 @@ export interface ComponentPropertyDefinition {
    * are placeholders for runtime data. `none` emits a bare field (typical for @api).
    */
   jsInitializer?: JsInitializer;
+  /**
+   * When true, warn if the stored value is not an array of {label, value} objects.
+   * Used for Salesforce `options` bindings that the builder cannot yet edit structurally.
+   */
+  warnWhenUnstructuredOptions?: boolean;
   /**
    * Converts a structured inspector value into a Salesforce-shaped JS value.
    * Used for object-list properties such as datatable columns. Must strip
@@ -296,4 +406,9 @@ export interface ComponentDefinition {
   properties: ComponentPropertyDefinition[];
   canvas: CanvasBehavior;
   output: HtmlOutputBehavior;
+  /**
+   * Optional generated-class metadata. When present on any node in the tree,
+   * the JS planner uses it for imports and the class `extends` clause.
+   */
+  jsClass?: JsClassBehavior;
 }

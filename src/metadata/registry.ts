@@ -14,16 +14,20 @@
 import type { ComponentDefinition } from '@/types/component';
 import { BASIC_COMPONENTS } from './components/basic';
 import { FORM_COMPONENTS } from './components/forms';
+import { RECORD_FORM_COMPONENTS } from './components/recordForms';
 import { LAYOUT_COMPONENTS } from './components/layout';
 import { DISPLAY_COMPONENTS } from './components/display';
 import { DATATABLE_COMPONENTS } from './components/datatable';
+import { MODAL_COMPONENTS } from './components/modal';
 
 export const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
   ...BASIC_COMPONENTS,
   ...FORM_COMPONENTS,
+  ...RECORD_FORM_COMPONENTS,
   ...LAYOUT_COMPONENTS,
   ...DISPLAY_COMPONENTS,
   ...DATATABLE_COMPONENTS,
+  ...MODAL_COMPONENTS,
 ];
 
 export const COMPONENT_DEFINITION_MAP: ReadonlyMap<string, ComponentDefinition> = new Map(

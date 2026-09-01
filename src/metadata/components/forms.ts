@@ -598,6 +598,7 @@ export const FORM_COMPONENTS: ComponentDefinition[] = [
         jsBinding: 'options',
         jsRole: 'internal-field',
         jsInitializer: 'empty-array',
+        warnWhenUnstructuredOptions: true,
         required: true,
         defaultValue: 'options',
         description:
@@ -700,6 +701,7 @@ export const FORM_COMPONENTS: ComponentDefinition[] = [
         jsBinding: 'options',
         jsRole: 'internal-field',
         jsInitializer: 'empty-array',
+        warnWhenUnstructuredOptions: true,
         required: true,
         defaultValue: 'options',
         description:
@@ -803,6 +805,7 @@ export const FORM_COMPONENTS: ComponentDefinition[] = [
         jsBinding: 'options',
         jsRole: 'internal-field',
         jsInitializer: 'empty-array',
+        warnWhenUnstructuredOptions: true,
         required: true,
         defaultValue: 'options',
         description:

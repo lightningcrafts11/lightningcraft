@@ -5,6 +5,11 @@ import type { BuilderNode } from '@/types/builder';
 import type { ComponentDefinition, PreviewKind } from '@/types/component';
 import { cn } from '@/utils/cn';
 import DatatablePreview from '@/renderer/DatatablePreview';
+import {
+  designTimeFieldLabel,
+  designTimeFieldSample,
+  designTimeInputKind,
+} from '@/metadata/recordForms/preview';
 
 function str(attrs: Record<string, unknown> | undefined, key: string, fallback = ''): string {
   const v = attrs?.[key];
@@ -245,6 +250,96 @@ const LEAF_PREVIEW_RENDERERS: Record<PreviewKind, PreviewFn> = {
   ),
 
   datatable: (node) => <DatatablePreview node={node} />,
+
+  'input-field': (node) => {
+    const fieldName = str(node.attributes, 'field-name', 'Name');
+    const label = designTimeFieldLabel(fieldName);
+    const kind = designTimeInputKind(fieldName);
+    const required = node.attributes.required === true;
+    const disabled = node.attributes.disabled === true;
+    const readOnly = node.attributes['read-only'] === true;
+    const variant = str(node.attributes, 'variant', 'standard');
+    const value = str(node.attributes, 'value');
+    const hideLabel = variant === 'label-hidden';
+    const controlClass = cn(
+      'h-7 rounded border bg-white px-2 flex items-center text-xs min-w-0 flex-1',
+      readOnly ? 'border-zinc-200 text-zinc-500' : 'border-zinc-300',
+      value ? 'text-zinc-700' : 'text-zinc-400'
+    );
+
+    if (kind === 'checkbox') {
+      return (
+        <div className={cn('flex items-center gap-2 pointer-events-none', disabled && 'opacity-50')}>
+          <span className="w-3.5 h-3.5 rounded border border-zinc-400 bg-white shrink-0 inline-block" />
+          <span className="text-xs font-medium text-zinc-600">
+            {label}
+            {required && (
+              <span className="text-red-500 ml-0.5" aria-hidden>
+                *
+              </span>
+            )}
+          </span>
+        </div>
+      );
+    }
+
+    let control: ReactNode;
+    if (kind === 'picklist') {
+      control = (
+        <div className={cn(controlClass, 'justify-between')}>
+          <span>{value || 'Select…'}</span>
+          <span>▾</span>
+        </div>
+      );
+    } else if (kind === 'date') {
+      control = <div className={controlClass}>{value || 'Sample date'}</div>;
+    } else if (kind === 'number') {
+      control = <div className={cn(controlClass, 'justify-end font-mono')}>{value || ''}</div>;
+    } else {
+      control = <div className={controlClass}>{value || ''}</div>;
+    }
+
+    return (
+      <div
+        className={cn(
+          'flex gap-1 pointer-events-none w-full',
+          variant === 'label-inline' ? 'flex-row items-center' : 'flex-col',
+          disabled && 'opacity-50'
+        )}
+      >
+        {!hideLabel && (
+          <span className="text-xs font-medium text-zinc-600">
+            {label}
+            {required && (
+              <span className="text-red-500 ml-0.5" aria-hidden>
+                *
+              </span>
+            )}
+          </span>
+        )}
+        {control}
+      </div>
+    );
+  },
+
+  messages: () => (
+    <div className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800 pointer-events-none">
+      Form messages
+    </div>
+  ),
+
+  'output-field': (node) => {
+    const fieldName = str(node.attributes, 'field-name', 'Name');
+    const label = designTimeFieldLabel(fieldName);
+    const sample = designTimeFieldSample(fieldName);
+    const hideLabel = str(node.attributes, 'variant', 'standard') === 'label-hidden';
+    return (
+      <div className="flex flex-col gap-0.5 pointer-events-none w-full">
+        {!hideLabel && <span className="text-xs font-medium text-zinc-500">{label}</span>}
+        <span className="text-sm text-zinc-800">{sample}</span>
+      </div>
+    );
+  },
 };
 
 /** Renders a lightweight visual preview from canvas.previewKind metadata. */

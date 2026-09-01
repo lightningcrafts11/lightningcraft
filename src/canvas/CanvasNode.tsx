@@ -25,6 +25,11 @@ import {
   getSlotContainerClass,
   getSlotContainerStyle,
 } from './slotLayout';
+import {
+  slotAcceptsChildren,
+  slotFallbackPrimary,
+  slotFallbackSecondary,
+} from '@/renderer/slotPreview';
 
 const CATEGORY_BADGE: Record<string, string> = {
   Basic: 'bg-sky-50 border-sky-200 text-sky-700',
@@ -45,9 +50,46 @@ function useActiveDrag() {
 interface SlotDropZoneProps {
   parentNode: BuilderNode;
   slotDef: SlotDefinition;
+  ancestorTypes: readonly string[];
 }
 
-function SlotDropZone({ parentNode, slotDef }: SlotDropZoneProps) {
+function SlotEmptyState({
+  parentNode,
+  slotDef,
+  isValidDrop,
+}: {
+  parentNode: BuilderNode;
+  slotDef: SlotDefinition;
+  isValidDrop: boolean;
+}) {
+  const primary = slotFallbackPrimary(parentNode, slotDef);
+  const secondary = slotFallbackSecondary(parentNode, slotDef);
+  if (primary || secondary) {
+    return (
+      <div className="flex flex-col gap-0.5 pointer-events-none min-w-0 py-0.5">
+        {primary && (
+          <span className="text-xs font-semibold text-zinc-700 truncate">{primary}</span>
+        )}
+        {secondary && (
+          <span className="text-[11px] text-zinc-500 truncate">{secondary}</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <span
+      className={cn(
+        'text-[11px] pointer-events-none self-center',
+        isValidDrop ? 'text-blue-400' : 'text-zinc-400'
+      )}
+    >
+      {isValidDrop ? `Drop ${slotDef.label} here` : 'Empty'}
+    </span>
+  );
+}
+
+function SlotDropZone({ parentNode, slotDef, ancestorTypes }: SlotDropZoneProps) {
   const droppableId = `slot:${parentNode.id}:${slotDef.name}`;
   const children = parentNode.slots?.[slotDef.name] ?? [];
   const childIds = children.map((c) => c.id);
@@ -62,7 +104,8 @@ function SlotDropZone({ parentNode, slotDef }: SlotDropZoneProps) {
       : null;
 
   const isValidDrop =
-    activeDragType !== null && canDrop(activeDragType, parentNode.type, slotDef.name);
+    activeDragType !== null &&
+    canDrop(activeDragType, parentNode.type, slotDef.name, ancestorTypes);
 
   const strategy =
     slotDef.layout === 'horizontal' ? horizontalListSortingStrategy : verticalListSortingStrategy;
@@ -86,17 +129,15 @@ function SlotDropZone({ parentNode, slotDef }: SlotDropZoneProps) {
               key={child.id}
               node={child}
               inHorizontalLayout={slotDef.layout === 'horizontal'}
+              ancestorTypes={[...ancestorTypes, parentNode.type]}
             />
           ))}
           {isEmpty && (
-            <span
-              className={cn(
-                'text-[11px] pointer-events-none self-center',
-                isValidDrop ? 'text-blue-400' : 'text-zinc-400'
-              )}
-            >
-              {isValidDrop ? `Drop ${slotDef.label} here` : 'Empty'}
-            </span>
+            <SlotEmptyState
+              parentNode={parentNode}
+              slotDef={slotDef}
+              isValidDrop={isValidDrop && slotAcceptsChildren(slotDef)}
+            />
           )}
         </div>
       </SortableContext>
@@ -108,13 +149,23 @@ function SlotDropZone({ parentNode, slotDef }: SlotDropZoneProps) {
 // ContainerPreview — slot layout comes from canvas.slotArrangement metadata
 // ---------------------------------------------------------------------------
 
-function ContainerPreview({ node, def }: { node: BuilderNode; def: ComponentDefinition }) {
+function ContainerPreview({
+  node,
+  def,
+  ancestorTypes,
+}: {
+  node: BuilderNode;
+  def: ComponentDefinition;
+  ancestorTypes: readonly string[];
+}) {
   return (
     <ContainerSlots
       node={node}
       def={def}
       mode="builder"
-      renderSlot={(slotDef) => <SlotDropZone parentNode={node} slotDef={slotDef} />}
+      renderSlot={(slotDef) => (
+        <SlotDropZone parentNode={node} slotDef={slotDef} ancestorTypes={ancestorTypes} />
+      )}
     />
   );
 }
@@ -127,9 +178,15 @@ interface CanvasNodeProps {
   node: BuilderNode;
   /** True when this node is a child of a horizontal slot (e.g. lightning-layout). */
   inHorizontalLayout?: boolean;
+  /** Types of ancestors from nearest parent up to the canvas root. */
+  ancestorTypes?: readonly string[];
 }
 
-function CanvasNode({ node, inHorizontalLayout = false }: CanvasNodeProps) {
+function CanvasNode({
+  node,
+  inHorizontalLayout = false,
+  ancestorTypes = [],
+}: CanvasNodeProps) {
   const isSelected = useBuilderStore((s) => s.selectedNodeId === node.id);
   const selectNode = useBuilderStore((s) => s.selectNode);
   const requestDelete = useRequestDelete();
@@ -233,7 +290,7 @@ function CanvasNode({ node, inHorizontalLayout = false }: CanvasNodeProps) {
       </div>
 
       {isContainer && def ? (
-        <ContainerPreview node={node} def={def} />
+        <ContainerPreview node={node} def={def} ancestorTypes={ancestorTypes} />
       ) : (
         <div className="px-3 py-3">
           <LeafPreview node={node} def={def} />

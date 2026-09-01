@@ -14,6 +14,7 @@ import { isPropertyVisible, resolveAttributesForVisibility } from '@/utils/prope
 import { mergeClassNames, spacingToSldsClasses } from '@/utils/spacing';
 import { collectJsPlan } from './collectJsPlan';
 import { isValidJsBindingName } from './jsIdentifiers';
+import { isNestedClassOwner, nestedClassOwnerExportError } from './nestedClassOwner';
 import type { LwcBundlePlan } from '@/types/lwcExport';
 
 const INDENT = '    ';
@@ -34,7 +35,7 @@ export function generateLwcHtml(
   errors.push(...resolvedPlan.errors);
 
   for (const node of tree) {
-    const html = emitNode(node, 0, undefined, errors, resolvedPlan);
+    const html = emitNode(node, 0, undefined, errors, resolvedPlan, true);
     if (html) blocks.push(html);
   }
 
@@ -49,10 +50,38 @@ function emitNode(
   depth: number,
   slotName: string | undefined,
   errors: GenerationError[],
-  plan: LwcBundlePlan
+  plan: LwcBundlePlan,
+  isCanvasRoot: boolean
 ): string {
   const def = getComponentDefinition(node.type);
   if (!def) {
+    return '';
+  }
+
+  if (isNestedClassOwner(def, isCanvasRoot)) {
+    errors.push(nestedClassOwnerExportError(node));
+    return '';
+  }
+
+  if (def.output.unwrap) {
+    if (slotName) {
+      errors.push({
+        nodeId: node.id,
+        componentType: node.type,
+        message:
+          'An unwrapped component cannot be placed in a named Salesforce slot. ' +
+          'It must be the canvas root so helper tags emit as template children.',
+      });
+    }
+    return emitChildren(node, def, depth, errors, plan).join('\n\n');
+  }
+
+  if (!def.output.tagName) {
+    errors.push({
+      nodeId: node.id,
+      componentType: node.type,
+      message: 'ComponentDefinition is missing output.tagName.',
+    });
     return '';
   }
 
@@ -99,14 +128,100 @@ function emitChildren(
 
   for (const slotDef of slotDefs) {
     const children = node.slots?.[slotDef.name] ?? [];
-    const assignedSlot = salesforceSlotName(slotDef);
+    const assignedSlot = slotDef.wrapperTag ? undefined : salesforceSlotName(slotDef);
+    const nestedDepth = slotDef.wrapperTag ? childDepth + 1 : childDepth;
+    const childBlocks: string[] = [];
     for (const child of children) {
-      const html = emitNode(child, childDepth, assignedSlot, errors, plan);
-      if (html) blocks.push(html);
+      const html = emitNode(child, nestedDepth, assignedSlot, errors, plan, false);
+      if (html) childBlocks.push(html);
     }
+
+    if (slotDef.wrapperTag) {
+      const wrapped = emitWrappedSlot(node, def, slotDef, childBlocks, childDepth, errors, plan);
+      if (wrapped) blocks.push(wrapped);
+      continue;
+    }
+
+    blocks.push(...childBlocks);
   }
 
   return blocks;
+}
+
+function emitWrappedSlot(
+  parent: BuilderNode,
+  def: ComponentDefinition,
+  slotDef: SlotDefinition,
+  childBlocks: string[],
+  depth: number,
+  errors: GenerationError[],
+  plan: LwcBundlePlan
+): string {
+  const tag = slotDef.wrapperTag;
+  if (!tag) return '';
+
+  const text = wrapperText(parent, slotDef);
+  const attributes = collectWrapperAttributes(parent, def, slotDef, errors, plan);
+  const shouldEmit =
+    slotDef.emitWrapperWhenEmpty === true ||
+    childBlocks.length > 0 ||
+    text !== undefined ||
+    attributes.length > 0;
+
+  if (!shouldEmit) return '';
+
+  const pad = INDENT.repeat(depth);
+  const attrPad = INDENT.repeat(depth + 1);
+  const open = formatOpenTag(pad, attrPad, tag, attributes);
+  const inner: string[] = [];
+  if (text !== undefined) {
+    inner.push(`${INDENT.repeat(depth + 1)}${escapeText(text)}`);
+  }
+  inner.push(...childBlocks);
+
+  if (inner.length === 0) {
+    return `${open}\n${pad}</${tag}>`;
+  }
+
+  return `${open}\n\n${inner.join('\n\n')}\n\n${pad}</${tag}>`;
+}
+
+function wrapperText(parent: BuilderNode, slotDef: SlotDefinition): string | undefined {
+  if (!slotDef.wrapperTextProperty) return undefined;
+  const value = parent.attributes?.[slotDef.wrapperTextProperty];
+  if (typeof value !== 'string' || value === '') return undefined;
+  return value;
+}
+
+function collectWrapperAttributes(
+  parent: BuilderNode,
+  def: ComponentDefinition,
+  slotDef: SlotDefinition,
+  errors: GenerationError[],
+  plan: LwcBundlePlan
+): string[] {
+  const attributes: string[] = [];
+  const resolved = resolveAttributesForVisibility(def, parent.attributes ?? {});
+  for (const propertyName of slotDef.wrapperAttributes ?? []) {
+    const property = def.properties.find((item) => item.name === propertyName);
+    if (!property) continue;
+    if (!isPropertyVisible(property, resolved)) continue;
+    const value = resolveOutputValue(parent, property);
+    const assigned = assignedIdentifier(plan, parent.id, property.name);
+    const serialized = serializeAttribute(property, value, assigned);
+    if (serialized !== null) {
+      attributes.push(serialized);
+      continue;
+    }
+    if (property.required && isMissingValue(value)) {
+      errors.push({
+        nodeId: parent.id,
+        componentType: parent.type,
+        message: `Required property "${property.name}" has no value.`,
+      });
+    }
+  }
+  return attributes;
 }
 
 /** Named Salesforce slot, or undefined for the unnamed default slot. */
@@ -235,4 +350,8 @@ function escapeAttr(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;');
+}
+
+function escapeText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 }

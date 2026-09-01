@@ -1,20 +1,25 @@
 import type { LwcBundlePlan } from '@/types/lwcExport';
+import { isValidJsBindingName } from './jsIdentifiers';
 import { toLwcClassName } from './validateLwcName';
 
 const INDENT = '    ';
 
 export function generateLwcJs(plan: LwcBundlePlan, componentName: string): string {
   const className = toLwcClassName(componentName);
+  const baseClass = plan.classExtends.name;
   const lines: string[] = [];
 
-  lines.push(renderImport(plan));
-  lines.push('');
+  const importLines = renderImports(plan);
+  if (importLines.length > 0) {
+    lines.push(...importLines);
+    lines.push('');
+  }
 
   const body = renderClassBody(plan);
   if (body.length === 0) {
-    lines.push(`export default class ${className} extends LightningElement {}`);
+    lines.push(`export default class ${className} extends ${baseClass} {}`);
   } else {
-    lines.push(`export default class ${className} extends LightningElement {`);
+    lines.push(`export default class ${className} extends ${baseClass} {`);
     lines.push(...body);
     lines.push('}');
   }
@@ -22,10 +27,25 @@ export function generateLwcJs(plan: LwcBundlePlan, componentName: string): strin
   return `${lines.join('\n')}\n`;
 }
 
-function renderImport(plan: LwcBundlePlan): string {
-  const named = plan.imports[0]?.named ?? ['LightningElement'];
-  const unique = [...new Set(named)];
-  return `import { ${unique.join(', ')} } from "lwc";`;
+function renderImports(plan: LwcBundlePlan): string[] {
+  return plan.imports.map(renderImport);
+}
+
+function renderImport(entry: {
+  module: string;
+  named: string[];
+  defaultImport?: string;
+}): string {
+  const named = [...new Set(entry.named)].filter((name) => isValidJsBindingName(name));
+  const parts: string[] = [];
+  if (entry.defaultImport && isValidJsBindingName(entry.defaultImport)) {
+    parts.push(entry.defaultImport);
+  }
+  if (named.length > 0) parts.push(`{ ${named.join(', ')} }`);
+  if (parts.length === 0) {
+    return `import "${entry.module}";`;
+  }
+  return `import ${parts.join(', ')} from "${entry.module}";`;
 }
 
 function renderClassBody(plan: LwcBundlePlan): string[] {
