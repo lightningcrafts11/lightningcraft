@@ -194,7 +194,8 @@ export type PreviewKind =
   | 'datatable'
   | 'input-field'
   | 'output-field'
-  | 'messages';
+  | 'messages'
+  | 'record-form';
 
 /** One visual row of slot drop zones on the canvas. */
 export interface SlotArrangementRow {

@@ -19,12 +19,17 @@ export const EXCLUDE_LAYOUT_ITEM = [LAYOUT_ITEM_TYPE];
 
 export const RECORD_EDIT_FORM_TYPE = 'lightning-record-edit-form';
 export const RECORD_VIEW_FORM_TYPE = 'lightning-record-view-form';
+export const RECORD_FORM_TYPE = 'lightning-record-form';
 export const INPUT_FIELD_TYPE = 'lightning-input-field';
 export const OUTPUT_FIELD_TYPE = 'lightning-output-field';
 export const MESSAGES_TYPE = 'lightning-messages';
 
 /** Record forms cannot nest in themselves or in each other. */
-export const EXCLUDE_NESTED_RECORD_FORMS = [RECORD_EDIT_FORM_TYPE, RECORD_VIEW_FORM_TYPE];
+export const EXCLUDE_NESTED_RECORD_FORMS = [
+  RECORD_EDIT_FORM_TYPE,
+  RECORD_VIEW_FORM_TYPE,
+  RECORD_FORM_TYPE,
+];
 
 /** Shared composition for components that cannot contain builder children. */
 export const LEAF_COMPOSITION: ComponentComposition = {

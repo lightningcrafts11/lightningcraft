@@ -167,6 +167,8 @@ describe('LightningModal does not change existing composition', () => {
     expect(canDrop('lightning-input-field', 'LightningModal', 'default')).toBe(false);
     expect(canDrop('lightning-messages', 'lightning-record-edit-form', 'default')).toBe(true);
     expect(canDrop('lightning-messages', 'LightningModal', 'default')).toBe(false);
+    expect(canDrop('LightningModal', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-record-form', 'LightningModal', 'default')).toBe(true);
   });
 
   it('keeps datatable and layout-item rules unchanged', () => {

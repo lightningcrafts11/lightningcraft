@@ -204,6 +204,27 @@ export const RECORD_FORM_DENSITY_OPTIONS: SelectOption[] = [
   { label: 'Compact', value: 'compact' },
 ];
 
+/**
+ * lightning-record-form mode. Official values: view, edit, readonly.
+ * Empty omits the attribute so Salesforce infers edit (no record-id) or view (record-id).
+ */
+export const RECORD_FORM_MODE_OPTIONS: SelectOption[] = [
+  { label: 'Default (inferred)', value: '' },
+  { label: 'Edit', value: 'edit' },
+  { label: 'View', value: 'view' },
+  { label: 'Readonly', value: 'readonly' },
+];
+
+/**
+ * lightning-record-form layout-type. Official values: Compact, Full.
+ * Empty omits the attribute so the form can use the fields array only.
+ */
+export const RECORD_FORM_LAYOUT_TYPE_OPTIONS: SelectOption[] = [
+  { label: 'None', value: '' },
+  { label: 'Full', value: 'Full' },
+  { label: 'Compact', value: 'Compact' },
+];
+
 /** lightning-output-field variant. Official values: standard, label-hidden. */
 export const OUTPUT_FIELD_VARIANT_OPTIONS: SelectOption[] = [
   { label: 'Standard', value: 'standard' },

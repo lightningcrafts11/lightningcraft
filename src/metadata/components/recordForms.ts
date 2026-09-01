@@ -1,4 +1,4 @@
-import { BookOpen, ClipboardPen, MessageSquare, Text, TextCursorInput } from 'lucide-react';
+import { BookOpen, ClipboardList, ClipboardPen, MessageSquare, Text, TextCursorInput } from 'lucide-react';
 import type { ComponentDefinition, ComponentPropertyDefinition } from '@/types/component';
 import {
   ANY_TYPE,
@@ -8,17 +8,25 @@ import {
   INPUT_FIELD_TYPE,
   LAYOUT_ITEM_TYPE,
   LAYOUT_TYPE,
+  LEAF_COMPOSITION,
   LEAF_SPACING,
   MESSAGES_TYPE,
   OUTPUT_FIELD_TYPE,
   RECORD_EDIT_FORM_TYPE,
+  RECORD_FORM_TYPE,
   RECORD_VIEW_FORM_TYPE,
   lwcOutput,
 } from '../shared/composition';
 import {
+  RECORD_FORM_FIELD_ITEM_PROPERTIES,
+  toSalesforceFieldApiNames,
+} from '../recordForms/fields';
+import {
   LABEL_VARIANT_OPTIONS,
   OUTPUT_FIELD_VARIANT_OPTIONS,
   RECORD_FORM_DENSITY_OPTIONS,
+  RECORD_FORM_LAYOUT_TYPE_OPTIONS,
+  RECORD_FORM_MODE_OPTIONS,
 } from '../shared/options';
 
 /** Binding initializer for record-id={recordId} → recordId = "". */
@@ -115,6 +123,112 @@ function formEvent(
 }
 
 export const RECORD_FORM_COMPONENTS: ComponentDefinition[] = [
+  {
+    type: RECORD_FORM_TYPE,
+    salesforceName: RECORD_FORM_TYPE,
+    displayName: 'Record Form',
+    category: 'Forms',
+    description:
+      'Self-contained create, view, or edit form. Specify fields or layout-type. Salesforce renders input/output fields internally; do not nest lightning-input-field or lightning-output-field. Design-time only; not connected to an org.',
+    icon: ClipboardList,
+    styleCapabilities: CONTAINER_SPACING,
+    composition: LEAF_COMPOSITION,
+    defaultAttributes: {
+      density: 'auto',
+      'layout-type': 'Full',
+    },
+    properties: [
+      objectApiNameProperty(),
+      recordIdBindingProperty(),
+      {
+        name: 'mode',
+        attributeName: 'mode',
+        label: 'Mode',
+        type: 'select',
+        description:
+          'Interaction style: view, edit, or readonly. Omit to let Salesforce infer edit when record-id is absent and view when record-id is set.',
+        options: RECORD_FORM_MODE_OPTIONS,
+      },
+      {
+        name: 'layout-type',
+        attributeName: 'layout-type',
+        label: 'Layout Type',
+        type: 'select',
+        defaultValue: 'Full',
+        description:
+          'Load fields from the object Compact or Full layout. When creating a record (no record-id), Compact is not supported and Salesforce shows the full layout. Prefer fields or layout-type, not both.',
+        options: RECORD_FORM_LAYOUT_TYPE_OPTIONS,
+      },
+      {
+        name: 'fields',
+        attributeName: 'fields',
+        label: 'Fields',
+        type: 'object-list',
+        htmlAttribute: false,
+        outputKind: 'binding',
+        jsBinding: 'fields',
+        jsRole: 'internal-field',
+        jsInitializer: 'literal',
+        serializeJsValue: toSalesforceFieldApiNames,
+        description:
+          'JavaScript string array of field API names, emitted as fields={fields}. Fields appear in this order. Use instead of (or without) layout-type. Not child components.',
+        itemSchema: {
+          defaultItem: { fieldApiName: 'Name' },
+          titleProperty: 'fieldApiName',
+          addLabel: 'Add field',
+          emptyLabel: 'No fields listed. Salesforce uses layout-type when set, or this array.',
+          properties: RECORD_FORM_FIELD_ITEM_PROPERTIES,
+        },
+      },
+      {
+        name: 'columns',
+        attributeName: 'columns',
+        label: 'Columns',
+        type: 'number',
+        min: 1,
+        description: 'Number of columns for the form. Omit to use the Salesforce default.',
+        placeholder: 'e.g. 2',
+      },
+      densityProperty(),
+      {
+        name: 'record-type-id',
+        attributeName: 'record-type-id',
+        label: 'Record Type Id',
+        type: 'text',
+        description:
+          'Record type ID when the object has multiple record types and no default. Literal string.',
+        placeholder: '012xxxxxxxxxxxx',
+      },
+      formEvent(
+        'onload',
+        'handleLoad',
+        'Handler when the form loads record data. Emitted only when a JavaScript identifier is set.'
+      ),
+      formEvent(
+        'onsubmit',
+        'handleSubmit',
+        'Handler when the form is submitted. Emitted only when a JavaScript identifier is set.'
+      ),
+      formEvent(
+        'onsuccess',
+        'handleSuccess',
+        'Handler when the record saves successfully. Emitted only when a JavaScript identifier is set.'
+      ),
+      formEvent(
+        'onerror',
+        'handleError',
+        'Handler when the form returns a server-side error. Emitted only when a JavaScript identifier is set.'
+      ),
+      formEvent(
+        'oncancel',
+        'handleCancel',
+        'Handler when the user clicks Cancel. Emitted only when a JavaScript identifier is set. Unique to lightning-record-form among record form components.'
+      ),
+    ],
+    canvas: { kind: 'leaf', previewKind: 'record-form' },
+    output: lwcOutput(RECORD_FORM_TYPE),
+  },
+
   {
     type: RECORD_EDIT_FORM_TYPE,
     salesforceName: RECORD_EDIT_FORM_TYPE,

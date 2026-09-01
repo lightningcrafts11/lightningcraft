@@ -14,6 +14,8 @@ import {
   designTimeFieldSample,
   designTimeInputKind,
 } from '@/metadata/recordForms/preview';
+import { toSalesforceFieldApiNames } from '@/metadata/recordForms/fields';
+import { buildRecordFormViewModel } from '@/metadata/recordForms/viewModel';
 import { getLayoutItemStyle } from '@/utils/layoutGrid';
 import type { BuilderNode } from '@/types/builder';
 
@@ -30,6 +32,7 @@ function namesOf(type: string): string[] {
 describe('Salesforce record form registration', () => {
   it('registers record-form components including lightning-messages', () => {
     const types = [
+      'lightning-record-form',
       'lightning-record-edit-form',
       'lightning-input-field',
       'lightning-record-view-form',
@@ -47,6 +50,7 @@ describe('Salesforce record form registration', () => {
   });
 
   it('is found by display name and Salesforce tag', () => {
+    expect(def('lightning-record-form').displayName).toBe('Record Form');
     expect(def('lightning-record-edit-form').displayName).toBe('Record Edit Form');
     expect(def('lightning-input-field').displayName).toBe('Input Field');
     expect(def('lightning-record-view-form').displayName).toBe('Record View Form');
@@ -98,9 +102,15 @@ describe('Salesforce record form composition', () => {
     expect(canDrop('lightning-record-view-form', 'lightning-record-edit-form', 'default')).toBe(
       false
     );
+    expect(canDrop('lightning-record-form', 'lightning-record-edit-form', 'default')).toBe(false);
+    expect(canDrop('lightning-record-form', 'lightning-record-view-form', 'default')).toBe(false);
+    expect(canDrop('lightning-record-edit-form', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-record-view-form', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-record-form', 'lightning-record-form', 'default')).toBe(false);
   });
 
   it('allows record forms at root and supported siblings in an edit form', () => {
+    expect(canDropAtRoot('lightning-record-form')).toBe(true);
     expect(canDropAtRoot('lightning-record-edit-form')).toBe(true);
     expect(canDropAtRoot('lightning-record-view-form')).toBe(true);
     expect(canDrop('lightning-button', 'lightning-record-edit-form', 'default')).toBe(true);
@@ -712,6 +722,226 @@ describe('Salesforce record form HTML export with messages', () => {
     expect(bundle.files.js).not.toContain('@salesforce/schema');
     expect(bundle.files.js).not.toContain('lightning/uiRecordApi');
     expect(bundle.files.js).not.toContain('Apex');
+  });
+});
+
+describe('lightning-record-form', () => {
+  function matchesLibraryQuery(type: string, query: string): boolean {
+    const component = def(type);
+    const needle = query.toLowerCase();
+    return (
+      component.displayName.toLowerCase().includes(needle) ||
+      component.type.toLowerCase().includes(needle) ||
+      component.salesforceName.toLowerCase().includes(needle)
+    );
+  }
+
+  it('registers as a self-contained Forms leaf and is found by library search', () => {
+    const form = def('lightning-record-form');
+    expect(form.output.tagName).toBe('lightning-record-form');
+    expect(form.composition.acceptsChildren).toBe(false);
+    expect(form.composition.allowAtRoot).toBe(true);
+    expect(form.canvas).toEqual({ kind: 'leaf', previewKind: 'record-form' });
+    expect(form.styleCapabilities?.spacing?.margin).toBe(true);
+    expect(form.styleCapabilities?.spacing?.padding).toBe(false);
+    expect(matchesLibraryQuery('lightning-record-form', 'record form')).toBe(true);
+    expect(matchesLibraryQuery('lightning-record-form', 'lightning-record-form')).toBe(true);
+  });
+
+  it('exposes Salesforce record-form properties and omits edit-form-only attributes', () => {
+    expect(namesOf('lightning-record-form')).toEqual([
+      'object-api-name',
+      'record-id',
+      'mode',
+      'layout-type',
+      'fields',
+      'columns',
+      'density',
+      'record-type-id',
+      'onload',
+      'onsubmit',
+      'onsuccess',
+      'onerror',
+      'oncancel',
+    ]);
+    expect(namesOf('lightning-record-form')).not.toContain('form-class');
+    expect(namesOf('lightning-record-form')).not.toContain('optional-fields');
+    expect(namesOf('lightning-record-form')).not.toContain('class');
+    expect(namesOf('lightning-record-edit-form')).not.toContain('layout-type');
+    expect(namesOf('lightning-record-edit-form')).not.toContain('columns');
+    expect(namesOf('lightning-record-edit-form')).not.toContain('mode');
+    expect(namesOf('lightning-record-edit-form')).not.toContain('oncancel');
+    expect(def('lightning-record-form').defaultAttributes).toEqual({
+      density: 'auto',
+      'layout-type': 'Full',
+    });
+    const mode = def('lightning-record-form').properties.find((item) => item.name === 'mode');
+    expect(mode?.options?.map((option) => option.value)).toEqual(['', 'edit', 'view', 'readonly']);
+    const layout = def('lightning-record-form').properties.find((item) => item.name === 'layout-type');
+    expect(layout?.options?.map((option) => option.value)).toEqual(['', 'Full', 'Compact']);
+  });
+
+  it('keeps every documented property visible regardless of mode', () => {
+    const formDef = def('lightning-record-form');
+    for (const mode of ['', 'edit', 'view', 'readonly']) {
+      const visible = visibleProperties(formDef, { mode }).map((item) => item.name);
+      expect(visible).toEqual(namesOf('lightning-record-form'));
+    }
+  });
+
+  it('allows record-form in general content and rejects child fields and nested forms', () => {
+    expect(canDropAtRoot('lightning-record-form')).toBe(true);
+    expect(canDrop('lightning-record-form', 'lightning-card', 'default')).toBe(true);
+    expect(canDrop('lightning-record-form', 'lightning-layout-item', 'default')).toBe(true);
+    expect(canDrop('lightning-record-form', 'lightning-card', 'title')).toBe(false);
+    expect(canDrop('lightning-record-form', 'lightning-card', 'actions')).toBe(false);
+    expect(canDrop('lightning-record-form', 'lightning-layout', 'default')).toBe(false);
+    expect(canDrop('lightning-input-field', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-output-field', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-messages', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-button', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-layout', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('LightningModal', 'lightning-record-form', 'default')).toBe(false);
+    expect(canDrop('lightning-record-form', 'LightningModal', 'default')).toBe(true);
+  });
+
+  it('builds a design-time view model from fields, layout-type, mode, and columns', () => {
+    const inferredCreate = buildRecordFormViewModel({ 'layout-type': 'Full' });
+    expect(inferredCreate.mode).toBe('edit');
+    expect(inferredCreate.modeIsInferred).toBe(true);
+    expect(inferredCreate.showSaveCancel).toBe(true);
+    expect(inferredCreate.showInlineEdit).toBe(false);
+    expect(inferredCreate.usesLayoutPlaceholders).toBe(true);
+    expect(inferredCreate.fields.map((field) => field.fieldApiName)).toEqual([
+      'Name',
+      'Phone',
+      'Industry',
+    ]);
+    expect(inferredCreate.fields[0]?.sample).toBe('Acme Corporation');
+
+    const inferredView = buildRecordFormViewModel({
+      'record-id': 'recordId',
+      'layout-type': 'Compact',
+    });
+    expect(inferredView.mode).toBe('view');
+    expect(inferredView.showInlineEdit).toBe(true);
+    expect(inferredView.showSaveCancel).toBe(false);
+
+    const configured = buildRecordFormViewModel({
+      'object-api-name': 'Account',
+      mode: 'readonly',
+      columns: 2,
+      fields: [
+        { lcKey: 'secret', fieldApiName: 'Name' },
+        { fieldApiName: 'Phone' },
+      ],
+    });
+    expect(configured.objectApiName).toBe('Account');
+    expect(configured.mode).toBe('readonly');
+    expect(configured.modeIsInferred).toBe(false);
+    expect(configured.columns).toBe(2);
+    expect(configured.usesLayoutPlaceholders).toBe(false);
+    expect(configured.showSaveCancel).toBe(false);
+    expect(configured.fields.map((field) => field.fieldApiName)).toEqual(['Name', 'Phone']);
+  });
+
+  it('serializes fields to API names without lcKey or sample values', () => {
+    expect(
+      toSalesforceFieldApiNames([
+        { lcKey: 'a', fieldApiName: 'Name' },
+        { lcKey: 'b', fieldApiName: '  Phone  ' },
+        { fieldApiName: '' },
+      ])
+    ).toEqual(['Name', 'Phone']);
+  });
+
+  it('exports layout-type markup without child fields or preview samples', () => {
+    const form = createBuilderNode('lightning-record-form');
+    form.attributes['object-api-name'] = 'Account';
+    form.attributes.columns = 2;
+    form.attributes.mode = 'edit';
+    const result = generateLwcBundle([form]);
+    expect(result.errors).toEqual([]);
+    expect(result.files.html).toContain('<lightning-record-form');
+    expect(result.files.html).toContain('object-api-name="Account"');
+    expect(result.files.html).toContain('layout-type="Full"');
+    expect(result.files.html).toContain('density="auto"');
+    expect(result.files.html).toContain('columns="2"');
+    expect(result.files.html).toContain('mode="edit"');
+    expect(result.files.html).not.toContain('<lightning-input-field');
+    expect(result.files.html).not.toContain('<lightning-output-field');
+    expect(result.files.html).not.toContain('<lightning-messages');
+    expect(result.files.html).not.toContain('fields={');
+    expect(result.files.html).not.toContain('Acme Corporation');
+    expect(result.files.html).not.toContain('lcKey');
+    expect(result.files.html).not.toContain(form.id);
+    expect(result.files.js).toContain('extends LightningElement {}');
+    expect(result.files.js).not.toContain('fields =');
+    expect(result.files.js).not.toContain('@salesforce/schema');
+    expect(result.files.js).not.toContain('lightning/uiRecordApi');
+  });
+
+  it('exports fields={fields} and handlers when configured, without record-id when omitted', () => {
+    const form = createBuilderNode('lightning-record-form');
+    form.attributes['object-api-name'] = 'Contact';
+    form.attributes['layout-type'] = '';
+    form.attributes.fields = [
+      { lcKey: 'one', fieldApiName: 'Name' },
+      { lcKey: 'two', fieldApiName: 'Phone' },
+    ];
+    form.attributes.onsuccess = 'handleSuccess';
+    form.attributes.oncancel = 'handleCancel';
+    const result = generateLwcBundle([form]);
+    expect(result.errors).toEqual([]);
+    expect(result.files.html).toContain('object-api-name="Contact"');
+    expect(result.files.html).toContain('fields={fields}');
+    expect(result.files.html).toContain('onsuccess={handleSuccess}');
+    expect(result.files.html).toContain('oncancel={handleCancel}');
+    expect(result.files.html).not.toContain('record-id');
+    expect(result.files.html).not.toContain('layout-type');
+    expect(result.files.html).not.toContain('lcKey');
+    expect(result.files.js).toContain('fields = [');
+    expect(result.files.js).toContain('"Name"');
+    expect(result.files.js).toContain('"Phone"');
+    expect(result.files.js).toContain('handleSuccess(event) {}');
+    expect(result.files.js).toContain('handleCancel(event) {}');
+    expect(result.files.js).not.toContain('recordId');
+    expect(result.files.js).not.toContain('@api');
+  });
+
+  it('emits record-id={recordId} and infers no mode attribute when mode is omitted', () => {
+    const form = createBuilderNode('lightning-record-form');
+    form.attributes['object-api-name'] = 'Account';
+    form.attributes['record-id'] = 'recordId';
+    const { html } = generateLwcHtml([form]);
+    expect(html).toContain('record-id={recordId}');
+    expect(html).not.toContain('mode=');
+  });
+
+  it('reports an invalid handler identifier and does not invent submit()', () => {
+    const form = createBuilderNode('lightning-record-form');
+    form.attributes['object-api-name'] = 'Account';
+    form.attributes.onsubmit = '123bad';
+    const result = generateLwcBundle([form]);
+    expect(result.errors.some((error) => error.message.includes('not a valid JavaScript identifier'))).toBe(
+      true
+    );
+    expect(result.files.js).not.toContain('submit(');
+    expect(result.files.js).not.toContain('.submit');
+  });
+
+  it('does not change Card, Layout, Datatable, edit/view forms, or LightningModal rules', () => {
+    expect(canDrop('lightning-formatted-text', 'lightning-card', 'title')).toBe(true);
+    expect(canDrop('lightning-button', 'lightning-card', 'actions')).toBe(true);
+    expect(canDrop('lightning-layout-item', 'lightning-layout', 'default')).toBe(true);
+    expect(canDropAtRoot('lightning-datatable')).toBe(true);
+    expect(canDrop('lightning-input-field', 'lightning-record-edit-form', 'default')).toBe(true);
+    expect(canDrop('lightning-output-field', 'lightning-record-view-form', 'default')).toBe(true);
+    expect(canDrop('lightning-messages', 'lightning-record-edit-form', 'default')).toBe(true);
+    expect(canDropAtRoot('LightningModal')).toBe(true);
+    expect(canDrop('LightningModal', 'lightning-card', 'default')).toBe(true);
+    expect(canDrop('LightningModal', 'lightning-card', 'footer')).toBe(false);
+    expect(canDrop('LightningModal', 'LightningModal', 'default')).toBe(false);
   });
 });
 

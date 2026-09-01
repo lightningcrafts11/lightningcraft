@@ -10,6 +10,7 @@ import {
   designTimeFieldSample,
   designTimeInputKind,
 } from '@/metadata/recordForms/preview';
+import { buildRecordFormViewModel } from '@/metadata/recordForms/viewModel';
 
 function str(attrs: Record<string, unknown> | undefined, key: string, fallback = ''): string {
   const v = attrs?.[key];
@@ -327,6 +328,60 @@ const LEAF_PREVIEW_RENDERERS: Record<PreviewKind, PreviewFn> = {
       Form messages
     </div>
   ),
+
+  'record-form': (node) => {
+    const model = buildRecordFormViewModel(node.attributes);
+    const density = str(node.attributes, 'density', 'auto');
+    const stacked = density !== 'compact';
+    return (
+      <div className="flex flex-col gap-2 pointer-events-none w-full rounded border border-zinc-200 bg-white p-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-mono text-zinc-500 truncate">
+            {model.objectApiName}
+          </span>
+          <span className="text-[10px] uppercase tracking-wide text-zinc-400 shrink-0">
+            {model.mode}
+            {model.modeIsInferred ? ' (inferred)' : ''}
+          </span>
+        </div>
+        {model.fields.length === 0 ? (
+          <p className="text-xs text-zinc-400">Specify fields or layout-type</p>
+        ) : (
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${model.columns}, minmax(0, 1fr))` }}
+          >
+            {model.fields.map((field) => (
+              <div key={field.fieldApiName} className={cn('flex gap-1 min-w-0', stacked ? 'flex-col' : 'flex-row items-center')}>
+                <span className="text-xs font-medium text-zinc-500 truncate">
+                  {field.label}
+                  {model.showInlineEdit ? <span className="ml-1 text-zinc-300">✎</span> : null}
+                </span>
+                {model.mode === 'readonly' || model.mode === 'view' ? (
+                  <span className="text-sm text-zinc-800 truncate">{field.sample}</span>
+                ) : (
+                  <div className="h-7 rounded border border-zinc-300 bg-white px-2 flex items-center text-xs text-zinc-400 min-w-0">
+                    {field.kind === 'picklist' ? 'Select…' : ''}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {model.showSaveCancel ? (
+          <div className="flex justify-end gap-2 pt-1">
+            <span className="px-3 py-1 text-xs rounded border border-zinc-300 text-zinc-600">Cancel</span>
+            <span className="px-3 py-1 text-xs rounded border border-blue-600 bg-blue-600 text-white">
+              Save
+            </span>
+          </div>
+        ) : null}
+        {model.usesLayoutPlaceholders ? (
+          <p className="text-[10px] text-zinc-400">Layout fields (preview only)</p>
+        ) : null}
+      </div>
+    );
+  },
 
   'output-field': (node) => {
     const fieldName = str(node.attributes, 'field-name', 'Name');
